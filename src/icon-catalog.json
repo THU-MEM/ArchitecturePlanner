@@ -1,0 +1,327 @@
+{
+  "icons": {
+    "lucide:graduation-cap": {
+      "src": "icons/lucide-graduation-cap.svg",
+      "label": "graduation-cap",
+      "brand": false
+    },
+    "lucide:sliders-horizontal": {
+      "src": "icons/lucide-sliders-horizontal.svg",
+      "label": "sliders-horizontal",
+      "brand": false
+    },
+    "lucide:plug": {
+      "src": "icons/lucide-plug.svg",
+      "label": "plug",
+      "brand": false
+    },
+    "lucide:network": {
+      "src": "icons/lucide-network.svg",
+      "label": "network",
+      "brand": false
+    },
+    "lucide:panels-top-left": {
+      "src": "icons/lucide-panels-top-left.svg",
+      "label": "panels-top-left",
+      "brand": false
+    },
+    "lucide:shield-check": {
+      "src": "icons/lucide-shield-check.svg",
+      "label": "shield-check",
+      "brand": false
+    },
+    "lucide:bot": {
+      "src": "icons/lucide-bot.svg",
+      "label": "bot",
+      "brand": false
+    },
+    "lucide:book-open": {
+      "src": "icons/lucide-book-open.svg",
+      "label": "book-open",
+      "brand": false
+    },
+    "lucide:brain-circuit": {
+      "src": "icons/lucide-brain-circuit.svg",
+      "label": "brain-circuit",
+      "brand": false
+    },
+    "lucide:server-cog": {
+      "src": "icons/lucide-server-cog.svg",
+      "label": "server-cog",
+      "brand": false
+    },
+    "lucide:cpu": {
+      "src": "icons/lucide-cpu.svg",
+      "label": "cpu",
+      "brand": false
+    },
+    "lucide:workflow": {
+      "src": "icons/lucide-workflow.svg",
+      "label": "workflow",
+      "brand": false
+    },
+    "lucide:file-check": {
+      "src": "icons/lucide-file-check.svg",
+      "label": "file-check",
+      "brand": false
+    },
+    "logos:postgresql": {
+      "src": "icons/logos-postgresql.svg",
+      "label": "PostgreSQL",
+      "brand": true
+    },
+    "lucide:boxes": {
+      "src": "icons/lucide-boxes.svg",
+      "label": "boxes",
+      "brand": false
+    },
+    "logos:redis": {
+      "src": "icons/logos-redis.svg",
+      "label": "Redis",
+      "brand": true
+    },
+    "logos:opentelemetry-icon": {
+      "src": "icons/logos-opentelemetry-icon.svg",
+      "label": "OpenTelemetry",
+      "brand": true
+    },
+    "lucide:clipboard-check": {
+      "src": "icons/lucide-clipboard-check.svg",
+      "label": "clipboard-check",
+      "brand": false
+    },
+    "lucide:wrench": {
+      "src": "icons/lucide-wrench.svg",
+      "label": "wrench",
+      "brand": false
+    },
+    "lucide:contact-round": {
+      "src": "icons/lucide-contact-round.svg",
+      "label": "contact-round",
+      "brand": false
+    },
+    "logos:github-actions": {
+      "src": "icons/logos-github-actions.svg",
+      "label": "GitHub Actions",
+      "brand": true
+    },
+    "lucide:key-round": {
+      "src": "icons/lucide-key-round.svg",
+      "label": "key-round",
+      "brand": false
+    },
+    "lucide:lock-keyhole": {
+      "src": "icons/lucide-lock-keyhole.svg",
+      "label": "lock-keyhole",
+      "brand": false
+    },
+    "lucide:badge-check": {
+      "src": "icons/lucide-badge-check.svg",
+      "label": "badge-check",
+      "brand": false
+    },
+    "lucide:radio": {
+      "src": "icons/lucide-radio.svg",
+      "label": "radio",
+      "brand": false
+    },
+    "lucide:send": {
+      "src": "icons/lucide-send.svg",
+      "label": "send",
+      "brand": false
+    },
+    "lucide:logs": {
+      "src": "icons/lucide-logs.svg",
+      "label": "logs",
+      "brand": false
+    },
+    "lucide:monitor": {
+      "src": "icons/lucide-monitor.svg",
+      "label": "monitor",
+      "brand": false
+    },
+    "lucide:cloud": {
+      "src": "icons/lucide-cloud.svg",
+      "label": "cloud",
+      "brand": false
+    },
+    "logos:kubernetes": {
+      "src": "icons/logos-kubernetes.svg",
+      "label": "Kubernetes",
+      "brand": true
+    },
+    "logos:docker-icon": {
+      "src": "icons/logos-docker-icon.svg",
+      "label": "Docker",
+      "brand": true
+    },
+    "logos:prometheus": {
+      "src": "icons/logos-prometheus.svg",
+      "label": "Prometheus",
+      "brand": true
+    },
+    "logos:grafana": {
+      "src": "icons/logos-grafana.svg",
+      "label": "Grafana",
+      "brand": true
+    },
+    "lucide:layers": {
+      "src": "icons/lucide-layers.svg",
+      "label": "layers",
+      "brand": false
+    },
+    "logos:microsoft-azure": {
+      "src": "icons/logos-microsoft-azure.svg",
+      "label": "Azure",
+      "brand": true
+    },
+    "logos:cloudflare": {
+      "src": "icons/logos-cloudflare.svg",
+      "label": "Cloudflare",
+      "brand": true
+    },
+    "logos:react": {
+      "src": "icons/logos-react.svg",
+      "label": "React",
+      "brand": true
+    },
+    "logos:github-icon": {
+      "src": "icons/logos-github-icon.svg",
+      "label": "GitHub",
+      "brand": true
+    },
+    "lucide:download": {
+      "src": "icons/lucide-download.svg",
+      "label": "download",
+      "brand": false
+    },
+    "lucide:upload": {
+      "src": "icons/lucide-upload.svg",
+      "label": "upload",
+      "brand": false
+    },
+    "lucide:users": {
+      "src": "icons/lucide-users.svg",
+      "label": "users",
+      "brand": false
+    },
+    "lucide:search": {
+      "src": "icons/lucide-search.svg",
+      "label": "search",
+      "brand": false
+    },
+    "lucide:plus": {
+      "src": "icons/lucide-plus.svg",
+      "label": "plus",
+      "brand": false
+    },
+    "lucide:x": {
+      "src": "icons/lucide-x.svg",
+      "label": "x",
+      "brand": false
+    },
+    "lucide:check": {
+      "src": "icons/lucide-check.svg",
+      "label": "check",
+      "brand": false
+    }
+  },
+  "nodeIcons": {
+    "M01": "lucide:clipboard-check",
+    "M02": "lucide:badge-check",
+    "M03": "lucide:workflow",
+    "M04": "lucide:book-open",
+    "M05": "lucide:monitor",
+    "M06": "lucide:bot",
+    "M07": "lucide:graduation-cap",
+    "M08": "lucide:clipboard-check",
+    "M09": "lucide:badge-check",
+    "M10": "lucide:file-check",
+    "M11": "lucide:radio",
+    "M12": "lucide:file-check",
+    "M13": "lucide:sliders-horizontal",
+    "M14": "lucide:workflow",
+    "M15": "lucide:book-open",
+    "M16": "lucide:brain-circuit",
+    "M17": "lucide:shield-check",
+    "M18": "lucide:radio",
+    "M19": "lucide:server-cog",
+    "M20": "lucide:book-open",
+    "M21": "lucide:shield-check",
+    "M22": "lucide:graduation-cap",
+    "M23": "lucide:boxes",
+    "M24": "lucide:clipboard-check",
+    "workspace": "lucide:monitor",
+    "client-loop": "lucide:bot",
+    "console": "lucide:sliders-horizontal",
+    "application-api": "lucide:network",
+    "domain-services": "lucide:graduation-cap",
+    "platform-services": "lucide:layers",
+    "storage": "logos:postgresql",
+    "workers": "lucide:workflow",
+    "providers": "lucide:cloud",
+    "project": "lucide:clipboard-check",
+    "profile": "lucide:contact-round",
+    "path": "lucide:workflow",
+    "learn": "lucide:graduation-cap",
+    "practice": "lucide:wrench",
+    "assessment": "lucide:file-check",
+    "growth": "lucide:badge-check",
+    "outcome": "lucide:file-check",
+    "credits": "lucide:graduation-cap",
+    "keycloak": "lucide:shield-check",
+    "backend-api": "lucide:network",
+    "model-gateway": "lucide:brain-circuit",
+    "tool-broker": "lucide:wrench",
+    "event-ingest": "lucide:radio",
+    "compute-control": "lucide:server-cog",
+    "postgres": "logos:postgresql",
+    "object-store": "lucide:boxes",
+    "redis-stream": "logos:redis",
+    "context-store": "lucide:layers",
+    "client-tools": "lucide:panels-top-left",
+    "session-service": "lucide:logs",
+    "memory-service": "lucide:brain-circuit",
+    "task-worker": "lucide:workflow",
+    "profile-service": "lucide:contact-round",
+    "project-service": "lucide:clipboard-check",
+    "path-service": "lucide:workflow",
+    "assessment-service": "lucide:file-check",
+    "knowledge-service": "lucide:network",
+    "content-service": "lucide:book-open",
+    "course-service": "lucide:graduation-cap",
+    "source-connectors": "lucide:plug",
+    "document-parser": "lucide:book-open",
+    "entity-extractor": "lucide:brain-circuit",
+    "knowledge-schema": "lucide:workflow",
+    "graph-query": "lucide:network",
+    "graph-store": "lucide:network",
+    "vector-index": "logos:postgresql",
+    "graph-evidence": "lucide:file-check",
+    "login-broker": "lucide:badge-check",
+    "api-auth": "lucide:shield-check",
+    "access-policy": "lucide:lock-keyhole",
+    "user-service": "lucide:contact-round",
+    "tool-registry": "lucide:clipboard-check",
+    "clickhouse": "lucide:boxes",
+    "evaluation-service": "lucide:file-check",
+    "prompt-service": "lucide:brain-circuit",
+    "usage-service": "lucide:logs",
+    "provider-adapter": "lucide:plug",
+    "media-service": "lucide:radio",
+    "external-model": "lucide:cloud",
+    "k8s-controller": "logos:kubernetes",
+    "edge-gateway": "lucide:network",
+    "release-pipeline": "logos:github-actions",
+    "service-runtime": "logos:docker-icon",
+    "observability": "logos:opentelemetry-icon",
+    "backup-service": "lucide:server-cog"
+  },
+  "componentBrands": {
+    "observability": [
+      "logos:opentelemetry-icon",
+      "logos:prometheus",
+      "logos:grafana"
+    ]
+  }
+}

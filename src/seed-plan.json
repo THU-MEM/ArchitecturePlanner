@@ -1,0 +1,931 @@
+{
+  "schemaVersion": 1,
+  "name": "AI-MEM 架构分工规划",
+  "people": [],
+  "modules": [
+    {
+      "id": "M05",
+      "name": "多模态学习呈现",
+      "summary": "文档、卡片、视频与交互式学习。",
+      "detail": "面向学习者呈现多种学习形态，把知识点、学习活动和进度连接起来，形成统一的学习工作台体验。",
+      "layer": "frontend",
+      "components": [
+        "workspace",
+        "client-tools",
+        "content-service",
+        "media-service",
+        "object-store",
+        "event-ingest"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "M06",
+      "name": "AI 学伴与 Agent",
+      "summary": "客户端 Agent loop 与持续陪伴。",
+      "detail": "前端交互式 Agent 围绕学习目标组织对话、上下文和工具使用；通过后端能力接口获取模型、知识、记忆与业务服务。",
+      "layer": "frontend",
+      "components": [
+        "client-loop",
+        "context-store",
+        "client-tools",
+        "session-service",
+        "memory-service",
+        "knowledge-service",
+        "graph-query",
+        "model-gateway",
+        "tool-broker",
+        "tool-registry",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 290,
+        "y": 0
+      }
+    },
+    {
+      "id": "M09",
+      "name": "正向反馈与成长档案",
+      "summary": "呈现掌握情况、成长和优化方向。",
+      "detail": "把学习反馈、能力变化和后续建议转为积极、清晰的成长体验，帮助学习者持续完善自己的项目与能力。",
+      "layer": "frontend",
+      "components": [
+        "workspace",
+        "profile-service",
+        "assessment-service",
+        "event-ingest",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 580,
+        "y": 0
+      }
+    },
+    {
+      "id": "M13",
+      "name": "教师与管理工作台",
+      "summary": "教学配置、内容审核与运营管理。",
+      "detail": "为教师和管理者提供课程组织、内容审核、角色管理和运营工作空间，连接各业务服务的管理能力。",
+      "layer": "frontend",
+      "components": [
+        "console",
+        "backend-api",
+        "keycloak",
+        "user-service",
+        "access-policy",
+        "tool-registry",
+        "content-service",
+        "course-service"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 870,
+        "y": 0
+      }
+    },
+    {
+      "id": "M01",
+      "name": "项目输入与目标建模",
+      "summary": "把真实项目转为学习目标和能力需求。",
+      "detail": "组织项目背景、目标、环境和关键问题，形成后续测评、路径与实践共同使用的项目上下文。",
+      "layer": "learning",
+      "components": [
+        "workspace",
+        "client-loop",
+        "backend-api",
+        "project-service",
+        "model-gateway",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 0,
+        "y": 190
+      }
+    },
+    {
+      "id": "M02",
+      "name": "自适应测评",
+      "summary": "识别学习基础，建立能力画像。",
+      "detail": "通过动态测评识别已有基础、知识掌握和能力水平，为学习起点、内容选择与后续调整提供依据。",
+      "layer": "learning",
+      "components": [
+        "backend-api",
+        "profile-service",
+        "assessment-service",
+        "model-gateway",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 290,
+        "y": 190
+      }
+    },
+    {
+      "id": "M03",
+      "name": "学习路径规划",
+      "summary": "连接项目目标、知识点和学习顺序。",
+      "detail": "结合项目目标、能力画像与知识依赖形成学习路径，并随着学习证据和项目变化持续调整。",
+      "layer": "learning",
+      "components": [
+        "client-loop",
+        "path-service",
+        "profile-service",
+        "knowledge-service",
+        "graph-query",
+        "memory-service",
+        "model-gateway",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 580,
+        "y": 190
+      }
+    },
+    {
+      "id": "M04",
+      "name": "知识内容生成",
+      "summary": "围绕知识点组织多形态学习内容。",
+      "detail": "把知识和教学设计转为文档、卡片、视频等内容形态，连接内容生产、审核和发布。",
+      "layer": "learning",
+      "components": [
+        "content-service",
+        "knowledge-service",
+        "graph-query",
+        "model-gateway",
+        "prompt-service",
+        "media-service",
+        "task-worker",
+        "redis-stream",
+        "object-store"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 870,
+        "y": 190
+      }
+    },
+    {
+      "id": "M07",
+      "name": "开放问题与协作实践",
+      "summary": "真实问题、专家连接与同伴协作。",
+      "detail": "把基础训练和开放实践连接起来，组织真实问题、专家匹配、同伴协作与知识反馈，支持多种实践场景。",
+      "layer": "learning",
+      "components": [
+        "workspace",
+        "project-service",
+        "knowledge-service",
+        "graph-query",
+        "tool-broker",
+        "object-store",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 0,
+        "y": 360
+      }
+    },
+    {
+      "id": "M08",
+      "name": "过程评估与答辩",
+      "summary": "通过过程、作品与答辩观察能力。",
+      "detail": "综合学习过程、项目产出、工具使用和答辩表现形成评估证据，识别学习者的理解、迁移与独立解决问题能力。",
+      "layer": "learning",
+      "components": [
+        "assessment-service",
+        "session-service",
+        "event-ingest",
+        "model-gateway",
+        "object-store",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 290,
+        "y": 360
+      }
+    },
+    {
+      "id": "M10",
+      "name": "成果输出与展示",
+      "summary": "沉淀项目方案、作品与个人反思。",
+      "detail": "围绕项目生成和整理成果、实践指南、反思记录与展示材料，把学习过程连接到可表达、可交流的产出。",
+      "layer": "learning",
+      "components": [
+        "project-service",
+        "content-service",
+        "media-service",
+        "task-worker",
+        "redis-stream",
+        "object-store",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 580,
+        "y": 360
+      }
+    },
+    {
+      "id": "M22",
+      "name": "拼学分与课程组合",
+      "summary": "组合学习模块，连接课程与学分。",
+      "detail": "围绕课程目标组合学习模块、学习安排与评估方式，把个人学习成果连接到课程组织和学分认定。",
+      "layer": "learning",
+      "components": [
+        "course-service",
+        "assessment-service",
+        "content-service",
+        "user-service",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 870,
+        "y": 360
+      }
+    },
+    {
+      "id": "M14",
+      "name": "知识加工流水线",
+      "summary": "解析、提取、关联与知识入库。",
+      "detail": "把采集资料转为可用知识，串联文档解析、知识提取、规范化、关系构建和质量检查。",
+      "layer": "knowledge",
+      "components": [
+        "knowledge-service",
+        "source-connectors",
+        "document-parser",
+        "entity-extractor",
+        "knowledge-schema",
+        "graph-store",
+        "vector-index",
+        "graph-evidence",
+        "model-gateway",
+        "provider-adapter",
+        "task-worker",
+        "redis-stream",
+        "compute-control",
+        "postgres",
+        "object-store"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 0,
+        "y": 550
+      }
+    },
+    {
+      "id": "M15",
+      "name": "知识图谱与知识点",
+      "summary": "统一知识表达、关系与教学语义。",
+      "detail": "管理知识点、分类、依赖和关联关系，为路径规划、内容生成、知识检索和教学分析提供共同的知识模型。",
+      "layer": "knowledge",
+      "components": [
+        "knowledge-service",
+        "knowledge-schema",
+        "graph-store",
+        "vector-index",
+        "graph-evidence",
+        "graph-query",
+        "memory-service",
+        "postgres",
+        "evaluation-service"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 290,
+        "y": 550
+      }
+    },
+    {
+      "id": "M20",
+      "name": "案例与真实问题库",
+      "summary": "连接真实案例、实践问题和知识点。",
+      "detail": "管理结构化案例和真实问题，建立与知识点、项目实践和教学内容的关联，使案例持续进入学习过程。",
+      "layer": "knowledge",
+      "components": [
+        "knowledge-service",
+        "knowledge-schema",
+        "graph-query",
+        "graph-evidence",
+        "project-service",
+        "memory-service",
+        "postgres",
+        "object-store"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 580,
+        "y": 550
+      }
+    },
+    {
+      "id": "M23",
+      "name": "知识采集与来源管理",
+      "summary": "汇集资料来源，持续补充知识供给。",
+      "detail": "组织知识来源、授权资料和采集入口，形成可管理的资料集合，并根据教学需求持续补充知识供给。",
+      "layer": "knowledge",
+      "components": [
+        "knowledge-service",
+        "source-connectors",
+        "document-parser",
+        "graph-evidence",
+        "tool-broker",
+        "tool-registry",
+        "task-worker",
+        "redis-stream",
+        "object-store",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 870,
+        "y": 550
+      }
+    },
+    {
+      "id": "M11",
+      "name": "学习数据与事件",
+      "summary": "连接行为、业务事件与学习证据。",
+      "detail": "提供统一的学习事件采集和数据流转能力，支持进度、评估、运营分析和业务反馈。",
+      "layer": "platform",
+      "components": [
+        "event-ingest",
+        "redis-stream",
+        "postgres",
+        "clickhouse",
+        "observability"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 0,
+        "y": 740
+      }
+    },
+    {
+      "id": "M12",
+      "name": "评测与质量保障",
+      "summary": "评估路径、内容与 Agent 的效果。",
+      "detail": "通过场景回放、效果评测和质量分析，持续观察内容、模型与业务流程的表现，支持版本演进。",
+      "layer": "platform",
+      "components": [
+        "evaluation-service",
+        "prompt-service",
+        "model-gateway",
+        "task-worker",
+        "redis-stream",
+        "object-store",
+        "observability"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 290,
+        "y": 740
+      }
+    },
+    {
+      "id": "M16",
+      "name": "模型与提示词平台",
+      "summary": "模型接入、路由与提示词管理。",
+      "detail": "以统一能力接口连接不同模型，组织提示词与模型版本，为 Agent、内容生产和知识加工提供模型服务。",
+      "layer": "platform",
+      "components": [
+        "model-gateway",
+        "prompt-service",
+        "provider-adapter",
+        "usage-service",
+        "external-model",
+        "evaluation-service"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 580,
+        "y": 740
+      }
+    },
+    {
+      "id": "M17",
+      "name": "用户与身份服务",
+      "summary": "学习者、教师与管理者的身份入口。",
+      "detail": "统一用户身份、账户和角色上下文，为各端登录及后端资源访问提供共同的身份能力。",
+      "layer": "platform",
+      "components": [
+        "keycloak",
+        "login-broker",
+        "api-auth",
+        "user-service",
+        "access-policy",
+        "postgres"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 870,
+        "y": 740
+      }
+    },
+    {
+      "id": "M18",
+      "name": "语音与媒体服务",
+      "summary": "声音、字幕和媒体处理能力。",
+      "detail": "组织语音合成、音色、字幕及相关媒体处理，为学习呈现、学伴互动和内容生产提供媒体能力。",
+      "layer": "platform",
+      "components": [
+        "media-service",
+        "provider-adapter",
+        "usage-service",
+        "task-worker",
+        "redis-stream",
+        "object-store",
+        "external-model"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 0,
+        "y": 910
+      }
+    },
+    {
+      "id": "M19",
+      "name": "算力与任务调度",
+      "summary": "连接云端、本地与合作方计算资源。",
+      "detail": "组织计算资源、任务队列和执行调度，支持知识加工、媒体生成和批量评测等后台任务。",
+      "layer": "platform",
+      "components": [
+        "compute-control",
+        "k8s-controller",
+        "task-worker",
+        "redis-stream",
+        "service-runtime",
+        "usage-service",
+        "observability"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 290,
+        "y": 910
+      }
+    },
+    {
+      "id": "M21",
+      "name": "关键风险与验收",
+      "summary": "贯穿业务效果、体验和质量管理。",
+      "detail": "围绕关键风险组织评估、验证和验收，与各业务模块和平台能力共同形成质量管理闭环。",
+      "layer": "governance",
+      "components": [
+        "evaluation-service",
+        "access-policy",
+        "observability",
+        "backup-service"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 0,
+        "y": 1100
+      }
+    },
+    {
+      "id": "M24",
+      "name": "项目管理与协同",
+      "summary": "统筹依赖、进度、联调与交付。",
+      "detail": "围绕整体目标协调模块依赖、阶段任务、问题处理和集成交付，推动各团队与模块协同。",
+      "layer": "governance",
+      "components": [
+        "release-pipeline",
+        "observability",
+        "evaluation-service",
+        "backup-service"
+      ],
+      "owners": [],
+      "status": "planned",
+      "position": {
+        "x": 290,
+        "y": 1100
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "workspace",
+      "name": "学习工作台",
+      "detail": "学习者的统一入口。通过界面组件组织项目、学习活动与成果，并与客户端 Agent 和后端业务 API 协作。",
+      "stack": "React / Vite（Web）· 各端 UI"
+    },
+    {
+      "id": "client-loop",
+      "name": "客户端 Agent loop",
+      "detail": "Agent loop 运行在客户端，负责交互过程的推理与工具编排。模型调用和服务端工具通过后端 API 提供，后台长任务由任务组件承接。",
+      "stack": "Client Runtime · Tool Adapter"
+    },
+    {
+      "id": "console",
+      "name": "教师与管理工作台",
+      "detail": "面向教师与管理者的前端应用，组合课程、内容、用户与运营能力，通过同一后端能力层访问业务服务。",
+      "stack": "React / Vite · Role Workspace"
+    },
+    {
+      "id": "application-api",
+      "name": "应用 API 与能力入口",
+      "detail": "连接各端与后端服务的应用接口层。这里的 API 是客户端使用业务和平台能力的入口，不代表把 Agent loop 放在服务端。",
+      "stack": ""
+    },
+    {
+      "id": "domain-services",
+      "name": "教学与知识领域服务",
+      "detail": "以业务对象和职责组织领域服务，形成学习与知识两条主线。各模块通过清晰的组件接口协作，共享业务模型而非相互穿透数据。",
+      "stack": ""
+    },
+    {
+      "id": "platform-services",
+      "name": "平台能力与扩展组件",
+      "detail": "把可复用能力组织为组件接口。模型提供方、工具、媒体能力和内容呈现方式都可通过相应适配器扩展，不需要改动整条学习主线。",
+      "stack": ""
+    },
+    {
+      "id": "storage",
+      "name": "数据与知识存储",
+      "detail": "为教学、知识与平台服务提供数据基础，分别承载业务状态、文件内容、会话记忆和知识检索。",
+      "stack": ""
+    },
+    {
+      "id": "workers",
+      "name": "后台任务与执行组件",
+      "detail": "运行不依赖前端持续在线的后台任务。Worker 是后台任务的执行组件，与客户端交互式 Agent loop 分开表达。",
+      "stack": ""
+    },
+    {
+      "id": "providers",
+      "name": "模型、媒体与算力资源",
+      "detail": "通过平台适配器接入模型、媒体和计算资源，使业务模块不必绑定单一提供方。",
+      "stack": ""
+    },
+    {
+      "id": "project",
+      "name": "项目与学习目标",
+      "detail": "学习者带着真实项目或目标进入系统。项目背景与目标形成整条学习业务的上下文。",
+      "stack": ""
+    },
+    {
+      "id": "profile",
+      "name": "能力画像",
+      "detail": "测评和学习活动共同形成能力画像，为路径选择与后续反馈提供依据。",
+      "stack": ""
+    },
+    {
+      "id": "path",
+      "name": "学习路径",
+      "detail": "把项目需要的知识与学习者基础连接起来，形成有顺序、有关联的学习安排。",
+      "stack": ""
+    },
+    {
+      "id": "learn",
+      "name": "学习活动与 AI 学伴",
+      "detail": "围绕路径节点组织学习内容与交互式活动，AI 学伴陪伴理解、提问和应用。",
+      "stack": ""
+    },
+    {
+      "id": "practice",
+      "name": "项目实践与协作",
+      "detail": "将学习带入真实问题和项目任务，通过专家、同伴与案例资源支持实践。",
+      "stack": ""
+    },
+    {
+      "id": "assessment",
+      "name": "评估与学习证据",
+      "detail": "把学习过程、实践表现与答辩转为评估证据，为理解能力变化提供依据。",
+      "stack": ""
+    },
+    {
+      "id": "growth",
+      "name": "掌握与成长",
+      "detail": "呈现能力成长和优化方向，并把反馈连接回能力画像与学习路径。",
+      "stack": ""
+    },
+    {
+      "id": "outcome",
+      "name": "成果与作品",
+      "detail": "围绕项目沉淀可展示、可交流的成果，并保留学习者自己的实践思考。",
+      "stack": ""
+    },
+    {
+      "id": "credits",
+      "name": "课程与学分",
+      "detail": "将学习模块、评估与成果组织为课程组合，连接个性化学习与学分体系。",
+      "stack": ""
+    },
+    {
+      "id": "keycloak",
+      "name": "Keycloak 身份服务",
+      "detail": "提供统一认证与身份会话。学习者、教师和管理者登录后，由后端将身份连接到组织与业务访问规则。",
+      "stack": "Keycloak · OIDC"
+    },
+    {
+      "id": "backend-api",
+      "name": "应用与领域 API",
+      "detail": "承接前端业务、流式会话与工具请求，组合教学、知识和平台模块。可使用 NestJS / Fastify 或相同契约下的其他服务端实现。",
+      "stack": "HTTP · OpenAPI · SSE"
+    },
+    {
+      "id": "model-gateway",
+      "name": "模型网关",
+      "detail": "向客户端 Agent、内容生成、知识加工和评测提供统一模型接口，连接外部模型与自托管推理端点。",
+      "stack": "Provider Adapter · HTTP Streaming"
+    },
+    {
+      "id": "tool-broker",
+      "name": "工具网关与 MCP",
+      "detail": "把领域 API 与外部工具包装为 Agent 可调用能力，连接工具目录和具体实现。它是工具适配层，不是 Agent 推理循环。",
+      "stack": "MCP · Streamable HTTP"
+    },
+    {
+      "id": "event-ingest",
+      "name": "事件摄入服务",
+      "detail": "通过独立摄入接口接收各端学习事件与后台业务事件，连接 PostgreSQL、Redis Stream 与分析写入。",
+      "stack": "Fastify / HTTP · Event Schema"
+    },
+    {
+      "id": "compute-control",
+      "name": "算力与任务调度",
+      "detail": "组织任务与计算资源，连接后台执行器和集群控制面。在线推理请求通过模型网关，不通过集群管理 API。",
+      "stack": "Task Queue · Runtime Adapter"
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL / pgvector",
+      "detail": "承载用户业务关系、项目、课程、知识元数据、事件和会话等持久数据；pgvector 为记忆和知识检索提供向量索引。知识关系的图索引与多跳遍历由图引擎承担，不把向量库当作图数据库。",
+      "stack": "PostgreSQL · pgvector"
+    },
+    {
+      "id": "object-store",
+      "name": "MinIO / S3 对象存储",
+      "detail": "承载原始资料、学习媒体和成果文件，业务数据库保存归属与元数据。后端签发受控文件地址，客户端据此上传或下载。",
+      "stack": "S3 API · MinIO Adapter"
+    },
+    {
+      "id": "redis-stream",
+      "name": "Redis Stream / 队列",
+      "detail": "为学习事件、异步处理和后台任务提供缓冲与流转能力，与关系数据库和分析系统分工。",
+      "stack": "Redis · Streams"
+    },
+    {
+      "id": "context-store",
+      "name": "上下文与交互状态",
+      "detail": "在客户端组织项目上下文与当前对话，将模型响应和工具结果放入后续迭代所需的上下文。",
+      "stack": "Client State · Context Builder"
+    },
+    {
+      "id": "client-tools",
+      "name": "客户端工具与呈现",
+      "detail": "处理适合在本地完成的界面和呈现操作，将需要服务端数据或计算的操作交给后端工具接口。",
+      "stack": "UI Adapter · Renderer"
+    },
+    {
+      "id": "session-service",
+      "name": "会话与调用记录",
+      "detail": "持久化会话和调用记录，为客户端恢复对话、确认工具结果和关联后台任务提供接口。它不替代客户端的 Agent loop。",
+      "stack": "HTTP · SSE · PostgreSQL"
+    },
+    {
+      "id": "memory-service",
+      "name": "画像、记忆与检索",
+      "detail": "将学习画像、长期记忆和知识检索连接到会话及业务服务，借助 PostgreSQL / pgvector 组织持久内容与语义召回。",
+      "stack": "PostgreSQL · pgvector · Embedding"
+    },
+    {
+      "id": "task-worker",
+      "name": "后台任务 Worker",
+      "detail": "执行后台任务，记录状态与产物并将结果回传。客户端关闭不会把交互式 Agent 自动变成服务器上的自主 Agent。",
+      "stack": "Worker · Job · Task Queue"
+    },
+    {
+      "id": "profile-service",
+      "name": "学习者与能力画像",
+      "detail": "组织学习者目标、能力画像和掌握状态，为自适应测评、路径选择和成长反馈提供共同数据。",
+      "stack": "Domain Module · PostgreSQL"
+    },
+    {
+      "id": "project-service",
+      "name": "项目与协作实践",
+      "detail": "组织项目输入、实践任务、真实问题与成果材料，把项目活动与学习路径、案例和评估连接起来。",
+      "stack": "Domain Module · REST"
+    },
+    {
+      "id": "path-service",
+      "name": "学习路径服务",
+      "detail": "根据项目与画像组织知识点和学习安排，结合知识模型与学习反馈调整路径。",
+      "stack": "Domain Module · Knowledge Query"
+    },
+    {
+      "id": "assessment-service",
+      "name": "测评与过程评估",
+      "detail": "将测评、实践过程和答辩形成的证据转为评估结果，支撑能力画像、成长反馈和课程评价。",
+      "stack": "Domain Module · Event Consumer"
+    },
+    {
+      "id": "knowledge-service",
+      "name": "知识图谱与案例",
+      "detail": "组织知识点、概念与先修关系、资料来源和案例关联，完成实体归一、冲突治理与教师审核。把审核后的知识版本发布到图索引与向量索引，关联原始证据，向路径、内容与学伴提供统一知识接口。",
+      "stack": "Knowledge API · Schema / Builder · Graph Adapter"
+    },
+    {
+      "id": "source-connectors",
+      "name": "知识来源与采集",
+      "detail": "登记授权来源、内容许可与质量信息，通过来源适配器采集文档和结构化数据；维护来源清单与缺失知识反馈，为 M23 与知识加工提供可追溯输入。",
+      "stack": "Source Adapter · HTTP / File"
+    },
+    {
+      "id": "document-parser",
+      "name": "文档解析与分块",
+      "detail": "将资料解析为可引用的片段，保留章节、页码或媒体位置与来源元数据。原始文件保存在对象存储，解析与索引构建通过后台任务执行。",
+      "stack": "Parser · OCR Adapter · Worker"
+    },
+    {
+      "id": "entity-extractor",
+      "name": "实体与关系抽取",
+      "detail": "在领域 Schema 下提取知识点、概念、案例和关系，保留来源片段与质量信息。通过模型网关调用模型，把候选知识送入实体对齐和审核流程，不直接把模型输出当成已批准的教学知识。",
+      "stack": "LLM Extraction · Model Gateway · Builder"
+    },
+    {
+      "id": "knowledge-schema",
+      "name": "知识模型与 Schema",
+      "detail": "定义领域知识模型、知识点 ID 规则、实体与关系类型，以及教师维护的种子知识。约束抽取、实体对齐、入库校验与关系推理；OpenSPG 的语义建模能力可作为候选。",
+      "stack": "Knowledge Schema · OpenSPG（候选）"
+    },
+    {
+      "id": "graph-query",
+      "name": "图谱与混合检索",
+      "detail": "经知识服务组合关系遍历、向量召回与来源证据，向学习路径、内容生成、AI 学伴和真实问题案例提供知识查询。GraphRAG / KAG 可用于增强检索与问答；先修路径以审核后的知识关系为依据。前端 Agent 通过后端 API 或工具调用此能力。",
+      "stack": "Graph Traversal · Hybrid Retrieval · KAG（候选）"
+    },
+    {
+      "id": "graph-store",
+      "name": "知识图谱引擎",
+      "detail": "承载知识关系的图索引、邻居查询和多跳遍历，与 PostgreSQL 业务元数据和 pgvector 向量索引分工。阿里巴巴 GraphScope Flex 是自建候选，阿里云 GDB 是托管候选；查询语义、更新能力与运维方式通过图引擎适配层分别验证，不要求同时部署。",
+      "stack": "GraphScope Flex / Alibaba Cloud GDB（候选）"
+    },
+    {
+      "id": "vector-index",
+      "name": "知识向量索引",
+      "detail": "为原文片段和知识点构建向量索引，经模型网关生成 Embedding，用于语义召回。通过知识 ID 与图节点和原文证据关联；它是 PostgreSQL / pgvector 的知识检索用途，不是另一套独立数据库，也不能替代先修关系。",
+      "stack": "Embedding · PostgreSQL / pgvector"
+    },
+    {
+      "id": "graph-evidence",
+      "name": "来源证据与知识版本",
+      "detail": "把知识点、关系和案例连接回原始资料，保存来源位置、审核记录与知识版本。元数据复用 PostgreSQL，原件复用对象存储；图和向量索引均关联知识版本以支持追溯与重建，不是新增一套文件存储。",
+      "stack": "PostgreSQL · S3 API · Provenance"
+    },
+    {
+      "id": "content-service",
+      "name": "内容、媒体与成果",
+      "detail": "把知识与教学设计转为多形态内容，管理审核发布与成果归档，调用模型、媒体和文件服务完成生产。",
+      "stack": "Domain Module · Object Storage"
+    },
+    {
+      "id": "course-service",
+      "name": "课程与拼学分",
+      "detail": "将学习模块、课程目标和评估方式组合为课程安排，连接个性化学习成果与学分认定。",
+      "stack": "Domain Module · PostgreSQL"
+    },
+    {
+      "id": "login-broker",
+      "name": "微信 / 组织登录适配",
+      "detail": "在客户端登录与统一身份之间适配微信、企业身份等通道，业务用户关系仍由用户服务管理。",
+      "stack": "OIDC Broker · Channel Adapter"
+    },
+    {
+      "id": "api-auth",
+      "name": "API 身份校验",
+      "detail": "在后端接口入口验证请求身份，将用户、组织和调用方信息交给业务授权与服务处理。",
+      "stack": "JWT · JWKS"
+    },
+    {
+      "id": "access-policy",
+      "name": "角色、授权与资源策略",
+      "detail": "连接统一身份与具体业务资源的访问规则，服务教师、学生和管理者之间的协作场景。",
+      "stack": "RBAC · Scope · Resource Policy"
+    },
+    {
+      "id": "user-service",
+      "name": "用户与组织服务",
+      "detail": "管理身份之外的业务用户资料与组织关系，与 Keycloak 认证职责分开。",
+      "stack": "Domain Module · PostgreSQL"
+    },
+    {
+      "id": "tool-registry",
+      "name": "工具与能力注册",
+      "detail": "描述可调用工具和扩展能力，使 Agent 可以发现和使用受控接口；与用于研发工作流的 .agents/skills 分开。",
+      "stack": "Capability Manifest · JSON Schema"
+    },
+    {
+      "id": "clickhouse",
+      "name": "ClickHouse 分析",
+      "detail": "在分析负载需要时承接事件和指标查询，与 PostgreSQL 在线事务和 Redis 队列分工。",
+      "stack": "ClickHouse · Event Writer"
+    },
+    {
+      "id": "evaluation-service",
+      "name": "效果评测与回放",
+      "detail": "通过效果样例、工具轨迹和场景回放评估系统表现，连接业务风险与验收。工程正确性测试仍由各模块和 tests/ 承担。",
+      "stack": "Evaluation Runner · Dataset"
+    },
+    {
+      "id": "prompt-service",
+      "name": "提示词与模型配置",
+      "detail": "组织各业务场景的提示词和模型参数，与模型网关及评测工具协作。",
+      "stack": "Prompt Registry · Schema"
+    },
+    {
+      "id": "usage-service",
+      "name": "预算、用量与对账",
+      "detail": "围绕模型和媒体调用组织用量、预算与对账，为平台运营和资源安排提供数据。",
+      "stack": "Usage Ledger · PostgreSQL"
+    },
+    {
+      "id": "provider-adapter",
+      "name": "模型 Provider Adapter",
+      "detail": "屏蔽不同模型提供方的接口差异，连接模型网关与实际推理端点。",
+      "stack": "HTTP Adapter · Streaming"
+    },
+    {
+      "id": "media-service",
+      "name": "语音与媒体组件",
+      "detail": "为学习内容、AI 学伴和成果输出提供语音、字幕和媒体处理接口，可连接多个提供方与后台执行器。",
+      "stack": "TTS Adapter · Media Worker"
+    },
+    {
+      "id": "external-model",
+      "name": "外部 API / 自托管推理",
+      "detail": "实际执行模型、向量和语音请求的资源端点；可来自云服务或自托管运行时。",
+      "stack": "Provider API · Model Serving"
+    },
+    {
+      "id": "k8s-controller",
+      "name": "Kubernetes Controller",
+      "detail": "管理集群中的推理与后台工作负载，属于资源控制面，不作为每次推理请求的转发链路。",
+      "stack": "Kubernetes API · Controller"
+    },
+    {
+      "id": "edge-gateway",
+      "name": "入口代理与 Gateway",
+      "detail": "作为浏览器和客户端到后端的网络入口，路由身份、应用 API、模型与工具接口。",
+      "stack": "Caddy · Ingress"
+    },
+    {
+      "id": "release-pipeline",
+      "name": "CI、镜像与发布",
+      "detail": "组织客户端构建发布与服务端镜像交付，配合数据库迁移、环境配置和回滚流程。",
+      "stack": "CI · OCI Registry · Release"
+    },
+    {
+      "id": "service-runtime",
+      "name": "在线服务工作负载",
+      "detail": "承载后端在线服务进程；可按服务负载和依赖关系组织容器或集群工作负载。",
+      "stack": "Container · Deployment"
+    },
+    {
+      "id": "observability",
+      "name": "监控、日志与追踪",
+      "detail": "观察接口、工具、模型和任务运行，连接错误、延迟、队列积压与资源用量。轻量采集或完整监控栈可按规模选择。",
+      "stack": "OpenTelemetry · Metrics · Logs"
+    },
+    {
+      "id": "backup-service",
+      "name": "备份与恢复",
+      "detail": "围绕 PostgreSQL、知识图谱、对象和环境配置组织独立备份与恢复流程，避免把同盘副本当作完整恢复能力。图索引结合知识版本与来源证据恢复或重建，自建与托管图引擎分别配置恢复方式。",
+      "stack": "Database / Graph Backup · Object Lifecycle"
+    }
+  ],
+  "relationships": []
+}

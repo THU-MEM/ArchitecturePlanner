@@ -1,0 +1,41 @@
+:root {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #1c3041;
+  background: #edf2f5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --muted: #526779;
+  --line: #d1dce3;
+  --accent: #176976;
+  --navy: #16364d;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, textarea, select { font: inherit; }
+button, a, input, select, textarea { outline-offset: 3px; }
+:focus-visible { outline: 2px solid #176976; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+a { color: var(--accent); text-underline-offset: 4px; }
+button { border: 1px solid var(--line); background: #fff; color: #233d51; padding: 9px 13px; border-radius: 6px; font-size: 13px; line-height: 1.5; }
+button:hover:not(:disabled) { border-color: var(--accent); background: #eef7f8; }
+button.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+button.primary:hover:not(:disabled) { background: #105360; }
+input, select, textarea { width: 100%; border: 1px solid #b9cbd5; background: #fff; color: #1c3041; padding: 10px; border-radius: 5px; font-size: 14px; line-height: 1.5; caret-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: #617989; }
+textarea { resize: vertical; }
+label { display: block; font-size: 13px; font-weight: 600; line-height: 1.7; }
+label > input, label > select, label > textarea { display: block; margin-top: 5px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 27px; font-weight: 700; line-height: 1.35; letter-spacing: -.02em; }
+h2 { font-size: 17px; line-height: 1.4; }
+h3 { font-size: 14px; line-height: 1.5; }
+p { line-height: 1.75; overflow-wrap: anywhere; }
+::selection { background: #c6e7eb; color: #102f40; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip { position: absolute; left: 12px; top: -70px; z-index: 100; background: #fff; padding: 10px; }
+.skip:focus { top: 10px; }
+.muted { color: var(--muted); font-size: 12px; }
+.code { font-family: "Cascadia Code", Consolas, monospace; font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+@media(prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
