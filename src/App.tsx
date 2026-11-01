@@ -5,15 +5,16 @@ import seed from './seed-plan.json'
 import { addPerson, assignOwners, assignComponentOwners, layers, MAX_PLAN_BYTES, statuses, updateModule, validatePlan } from './plan.ts'
 import type { Component, Module, Plan } from './plan.ts'
 import Canvas from './Canvas.tsx'
+import CurrentArchitecture, { ImplementationContext } from './CurrentArchitecture.tsx'
 import { cloudRequest } from './cloud.ts'
 import Icon, { IconButton } from './Icon.tsx'
 import { componentIcons, moduleIcon, uiIcon } from './icons.ts'
 import './App.css'
 
 const storageKey = 'architecture-planner.plan.v1'
-const tabs = ['架构画布', '分工清单', '技术组件', '团队成员', '原始架构'] as const
+const tabs = ['项目现状', '架构画布', '分工清单', '技术组件', '团队成员', '原始架构'] as const
 type Tab = typeof tabs[number]
-const tabIcons = ['canvas', 'list', 'technology', 'users', 'original']
+const tabIcons = ['layer', 'canvas', 'list', 'technology', 'users', 'original']
 
 function initialDraft() {
   try {
@@ -54,6 +55,7 @@ function ComponentEditor({ component, plan, onApply, onTeam, onModule }: { compo
     <OwnerFields plan={plan} primary={primary} secondary={secondary} onPrimary={setPrimary} onSecondary={setSecondary} onTeam={onTeam} />
     <div className="related-modules">{plan.modules.filter(module => module.components.includes(component.id)).map(module => <button type="button" key={module.id} aria-label={`查看模块 ${module.id}`} title={module.name} onClick={() => onModule(module.id)}><Icon icon={moduleIcon(module.id)} decorative /><span className="code">{module.id}</span></button>)}</div>
     <details className="compact-detail"><summary>详情</summary><p>{component.detail}</p><small>{component.stack}</small></details>
+    <ImplementationContext componentId={component.id} />
     {error && <p className="error" role="alert">{error}</p>}
     <button className="primary apply-button" type="submit" aria-label="应用修改"><Icon icon={uiIcon('check')} decorative />应用</button>
   </form>
@@ -90,6 +92,7 @@ function OwnerEditor({ module, plan, onApply, onTeam }: { module: Module; plan: 
       const value = event.target.value
       if (value === 'planned' || value === 'active' || value === 'done') setStatus(value)
     }}>{Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+    <ImplementationContext moduleId={module.id} />
     <OwnerFields plan={plan} primary={primary} secondary={secondary} onPrimary={setPrimary} onSecondary={setSecondary} onTeam={onTeam} />
     <section className="mapping"><div className="section-title"><h3>组件</h3><IconButton icon="plus" label="添加组件" aria-expanded={mappingOpen} onClick={() => setMappingOpen(!mappingOpen)} /></div>
       <div className="mapped-icons">{plan.components.filter(component => references.includes(component.id)).map(component => <span key={component.id} className="mapped-icon" title={`${component.name} · ${component.stack}`}>{componentIcons(component).map(icon => <Icon key={icon.src} icon={icon} />)}</span>)}</div>
@@ -250,18 +253,19 @@ export default function App() {
       setPendingCloud(null)
       setNotice('规划已替换并保存为本地草稿。')
     }}>确认替换草稿</button><button onClick={() => setPendingCloud(null)}>保留当前草稿</button></section>}
-    <div className="workspace-heading"><div><h1>架构规划台</h1><p>{plan.name}</p></div><div className="progress-label"><strong>{assigned}/{plan.modules.length + plan.components.length}</strong><span>已分配</span></div></div>
-    <div className="workspace-shell">
+    <div className="workspace-heading"><div><h1>架构规划台</h1><p>{plan.name}</p></div><button className="current-entry" aria-label="查看 SSO 与 MEM-AI 现状" onClick={() => setTab('项目现状')}><Icon icon={uiIcon('layer')} decorative />SSO · MEM-AI</button><div className="progress-label"><strong>{assigned}/{plan.modules.length + plan.components.length}</strong><span>已分配</span></div></div>
+    <div className={`workspace-shell ${tab === '项目现状' ? 'current-shell' : ''}`}>
       <aside className="sidebar">
         <nav aria-label="规划视图">{tabs.map((item, index) => <IconButton key={item} icon={tabIcons[index]} label={item} aria-current={tab === item ? 'page' : undefined} onClick={() => setTab(item)} />)}</nav>
-        <div className="filter-section"><h2 className="sr-only">筛选</h2><label>搜索模块<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索" /></label>
+        {tab !== '项目现状' && <div className="filter-section"><h2 className="sr-only">筛选</h2><label>搜索模块<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索" /></label>
           <label>架构层<select value={layer} onChange={event => setLayer(event.target.value)}><option value="">全部架构层</option>{[...new Set(plan.modules.map(module => module.layer))].map(id => <option value={id} key={id}>{layers[id] ?? id}</option>)}</select></label>
           <label>Owner 筛选<select value={ownerFilter} onChange={event => setOwnerFilter(event.target.value)}><option value="">全部成员</option><option value="unassigned">尚未分配</option>{plan.people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
-        </div>
+        </div>}
         <div className="privacy-note"><Icon icon={uiIcon(revision === null ? 'lock' : 'cloudflare')} decorative /><strong>{revision === null ? '本地草稿' : `共享 v${revision}`}</strong></div>
       </aside>
       <main id="workspace" className={`workspace ${tab === '原始架构' ? 'original' : ''}`}>
-        <div className="view-heading"><h2>{tab}</h2><span>{tab === '技术组件' ? visibleComponents.length : visible.length}</span></div>
+        <div className="view-heading"><h2>{tab}</h2>{tab !== '项目现状' && <span>{tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>
+        {tab === '项目现状' && <CurrentArchitecture plan={plan} onComponent={id => { setSelectedComponent(id); setTab('技术组件'); setQuery(''); setOwnerFilter('') }} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} />}
         {tab === '架构画布' && <>{visible.length ? <ReactFlowProvider><Canvas plan={plan} visible={visible} selected={selected} onSelect={setSelected} onChange={apply} /></ReactFlowProvider> : <div className="empty">没有匹配的模块</div>}</>}
         {tab === '分工清单' && <div className="table-wrap"><table><caption className="sr-only">模块、主负责人及协作负责人</caption><thead><tr><th>模块与职责</th><th>架构层</th><th>主 owner</th><th>协作 owner</th><th>状态</th></tr></thead><tbody>{visible.map(module => <tr key={module.id} className={selected === module.id ? 'selected-row' : ''}><td><button className="module-link" aria-label={`${module.id} ${module.name}`} onClick={() => setSelected(module.id)}><span className="code">{module.id}</span>{module.name}</button><small>{module.summary}</small></td><td>{layers[module.layer] ?? module.layer}</td><td>{module.owners.filter(owner => owner.role === 'primary').map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、') || '未分配'}</td><td>{module.owners.filter(owner => owner.role === 'secondary').map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、') || '—'}</td><td><span className={`state state-${module.status}`}>{statuses[module.status]}</span></td></tr>)}</tbody></table>{!visible.length && <div className="empty">没有匹配的模块</div>}</div>}
         {tab === '技术组件' && <div className="component-list">{visibleComponents.map(component => <button key={component.id} className={`component-tile ${selectedComponent === component.id ? 'selected-component' : ''}`} aria-label={`${component.id} ${component.name}`} title={component.stack} onClick={() => setSelectedComponent(component.id)}><div className="logo-stack">{componentIcons(component).map(icon => <Icon key={icon.src} icon={icon} />)}</div><strong>{component.name}</strong><span className="tile-owner">{component.owners?.filter(owner => owner.role === 'primary').map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、') || '—'}</span></button>)}</div>}
@@ -273,7 +277,7 @@ export default function App() {
         </section>}
         {tab === '原始架构' && <><p className="view-hint">只读基线</p><iframe title="AI-MEM 原始架构" src={`${import.meta.env.BASE_URL}architecture.html`} /></>}
       </main>
-      {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} /></aside>}
+      {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && tab !== '项目现状' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} /></aside>}
     </div>
     <footer><p role="status">{notice}</p></footer>
   </div>

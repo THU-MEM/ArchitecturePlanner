@@ -99,6 +99,43 @@ td small { display: block; max-width: 300px; color: var(--muted); font-size: 11p
 .mapped-icon { display: flex; align-items: center; gap: 4px; padding: 7px; border: 1px solid #d6e3ea; border-radius: 7px; background: #fff; }
 .mapped-icon .icon { width: 27px; height: 27px; }
 .logo-stack { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.current-entry { display: inline-flex; align-items: center; gap: 9px; margin-left: auto; }
+.current-entry .icon { width: 22px; height: 22px; }
+.current-shell { grid-template-columns: 200px minmax(0, 1fr); }
+.current-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 23px 8px; }
+.current-heading h3 { font-size: 20px; }
+.current-heading p { color: var(--muted); font-size: 12px; }
+.current-legend { display: flex; gap: 18px; flex-wrap: wrap; padding: 0 23px 16px; font-size: 11px; color: var(--muted); }
+.current-legend .implemented { color: #24634f; }
+.current-legend .planned { color: #765921; }
+.current-map { height: 660px; background: #f4f8fa; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.current-map .react-flow__node-project { width: 250px; padding: 0; border: 0; background: none; }
+.current-picker { display: flex; align-items: center; gap: 14px; padding: 0 23px 18px; font-size: 12px; }
+.current-picker select { width: auto; max-width: 100%; min-width: 0; }
+.project-node { width: 100%; min-height: 116px; padding: 0; text-align: left; border-color: #aabecb; background: #fff; color: #213c51; border-radius: 7px; }
+.project-node strong { display: block; padding: 10px 12px; font-size: 16px; }
+.project-node-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #e8eff7; padding: 9px 12px; border-radius: 6px 6px 0 0; font-size: 11px; }
+.project-node.planned { border-style: dashed; }
+.project-node.planned .project-node-heading { background: #f5ecd7; color: #765921; }
+.project-node.selected-project { border-color: var(--accent); box-shadow: 0 4px 16px #17697626; }
+.project-node-stack { display: flex; align-items: center; gap: 9px; padding: 0 12px 12px; font-size: 11px; color: var(--muted); }
+.project-node-stack .icon { width: 28px; height: 28px; flex-shrink: 0; }
+.implementation-state { font-size: 10px; font-weight: 500; color: #24634f; }
+.implementation-state.planned { color: #765921; }
+.current-detail { padding: 23px; max-width: 85ch; font-size: 13px; }
+.current-detail > p { margin-top: 9px; }
+.current-stack { color: var(--accent); font-weight: 600; }
+.current-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.current-links button { display: flex; align-items: center; gap: 7px; }
+.current-links .icon { width: 18px; height: 18px; }
+.implementation-context { font-size: 12px; color: var(--muted); }
+.implementation-context > p, .implementation-context section { margin-top: 12px; }
+.implementation-context strong { color: #213c51; }
+.implementation-context section p { margin-top: 6px; }
+@media (max-width: 700px) {
+  .current-heading { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .current-entry { margin-left: 0; }
+}
 .owner-tools { display: flex; align-items: flex-end; gap: 9px; }
 .owner-tools label { flex: 1; min-width: 0; }
 .compact-detail { font-size: 12px; }

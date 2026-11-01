@@ -2,6 +2,76 @@ import { test, expect } from '@playwright/test'
 import seed from '../src/seed-plan.json' with { type: 'json' }
 import { mkdir } from 'node:fs/promises'
 
+test('current architecture distinguishes implemented identity and balance flows from planned client integration', async ({ page }) => {
+  const draft = structuredClone(seed)
+  draft.people = [{ id: 'alice', name: 'Alice' }]
+  draft.modules.find(module => module.id === 'M01')!.owners = [{ personId: 'alice', role: 'primary' }]
+  await page.addInitScript(plan => localStorage.setItem('architecture-planner.plan.v1', JSON.stringify(plan)), draft)
+  await page.goto('./')
+  await page.getByRole('button', { name: '项目现状', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'SSO · MEM-AI', exact: true })).toBeVisible()
+  await expect(page.getByText('源码已实现 ≠ 生产已上线', { exact: true })).toBeVisible()
+  await expect(page.locator('[data-flow="sso-balance"]')).toHaveAttribute('data-state', 'implemented')
+  await expect(page.locator('[data-flow="client-model"]')).toHaveAttribute('data-state', 'planned')
+  await expect(page.locator('[data-project="sso-console"]')).toContainText('keycloak-js')
+  await expect(page.locator('[data-flow="event-track"]')).toHaveAttribute('aria-label', 'Edge from sso-identity to sso-events')
+  await expect(page.locator('[data-flow="client-events"]')).toHaveAttribute('data-state', 'planned')
+  await expect(page.locator('[data-project="mem-gateway"]')).toContainText('MEM-AI')
+  await page.getByRole('button', { name: '查看现状 余额接入', exact: true }).click()
+  await expect(page.getByRole('region', { name: '项目实现详情' }).getByText('client_credentials · balance:read', { exact: true })).toBeVisible()
+  await expect(page.getByText('服务凭证仅用于余额查询，不是模型 API key，也不是用户 SSO token。', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '分配组件 usage-service', exact: true }).click()
+  await expect(page.getByRole('heading', { name: seed.components.find(component => component.id === 'usage-service')!.name, exact: true })).toBeVisible()
+  await page.getByLabel('主 owner').selectOption({ label: 'Alice' })
+  await page.getByRole('button', { name: '应用修改', exact: true }).click()
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('architecture-planner.plan.v1')!).components.find((component: { id: string }) => component.id === 'usage-service').owners)).toEqual([{ personId: 'alice', role: 'primary' }])
+  await page.getByRole('button', { name: '分工清单', exact: true }).click()
+  await expect(page.getByRole('row').filter({ hasText: 'M01' })).toContainText('Alice')
+})
+
+test('current project navigation frames the selected component on mobile without changing the planning draft', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto('./')
+  await page.getByRole('button', { name: '项目现状', exact: true }).click()
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/current-desktop.png', fullPage: true, animations: 'disabled' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByLabel('项目组件').selectOption('mem-gateway')
+  await page.getByRole('button', { name: '查看现状 MEM-AI 模型网关', exact: true }).scrollIntoViewIfNeeded()
+  await expect(page.locator('[data-project="mem-gateway"]')).toBeInViewport()
+  await expect(page.getByRole('region', { name: '项目实现详情' }).getByRole('heading', { name: 'MEM-AI 模型网关', exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  await page.screenshot({ path: '.impeccable/review/current-mobile.png', animations: 'disabled' })
+  expect(errors).toEqual([])
+})
+
+test('current architecture connectors do not pass through unrelated components', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: '项目现状', exact: true }).click()
+  await expect(page.locator('.current-map .react-flow__edge-path')).toHaveCount(14)
+  const intersections = await page.evaluate(() => {
+    const nodes = [...document.querySelectorAll<HTMLElement>('[data-project]')].map(node => ({ id: node.dataset.project!, box: node.getBoundingClientRect() }))
+    const collisions = new Set<string>()
+    for (const edge of document.querySelectorAll<SVGGElement>('[data-flow]')) {
+      const endpoints = edge.getAttribute('aria-label')!.match(/^Edge from (\S+) to (\S+)$/)!
+      const path = edge.querySelector<SVGPathElement>('.react-flow__edge-path')!
+      const matrix = path.getScreenCTM()!
+      for (let distance = 0; distance <= path.getTotalLength(); distance += 4) {
+        const point = path.getPointAtLength(distance).matrixTransform(matrix)
+        for (const node of nodes) {
+          if (node.id !== endpoints[1] && node.id !== endpoints[2] && point.x > node.box.left + 4 && point.x < node.box.right - 4 && point.y > node.box.top + 4 && point.y < node.box.bottom - 4) {
+            collisions.add(`${edge.dataset.flow} crosses ${node.id}`)
+          }
+        }
+      }
+    }
+    return [...collisions]
+  })
+  expect(intersections).toEqual([])
+})
+
 test('icon-first controls and colorful technology logos support editable component assignments', async ({ page }) => {
   await page.goto('./')
   await expect(page.getByRole('button', { name: '导出规划', exact: true }).locator('img')).toHaveCount(1)
