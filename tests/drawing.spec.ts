@@ -28,8 +28,14 @@ async function openDrawing(page: Page) {
   await expect(page.getByRole('button', { name: '下载画布文件', exact: true })).toBeEnabled()
 }
 
+async function selectTool(page: Page, tool: string) {
+  const input = page.getByTestId(`toolbar-${tool}`)
+  await page.locator('label.ToolIcon').filter({ has: input }).click()
+  await expect(input).toBeChecked()
+}
+
 async function draw(page: Page, tool: string, from: [number, number], to: [number, number]) {
-  await page.getByTestId(`toolbar-${tool}`).click()
+  await selectTool(page, tool)
   const box = (await page.locator('.drawing-stage').boundingBox())!
   await page.mouse.move(box.x + from[0], box.y + from[1])
   await page.mouse.down()
@@ -65,13 +71,13 @@ test('drawing tools create movable rectangles, connected arrows, lines, freehand
   await draw(page, 'rectangle', [740, 200], [920, 340])
   await draw(page, 'arrow', [525, 270], [735, 270])
   await draw(page, 'line', [340, 410], [580, 440])
-  await page.getByTestId('toolbar-freedraw').click()
+  await selectTool(page, 'freedraw')
   const box = (await page.locator('.drawing-stage').boundingBox())!
   await page.mouse.move(box.x + 740, box.y + 430)
   await page.mouse.down()
   for (const [x, y] of [[760, 410], [790, 460], [830, 420], [870, 440]]) await page.mouse.move(box.x + x, box.y + y, { steps: 4 })
   await page.mouse.up()
-  await page.getByTestId('toolbar-text').click()
+  await selectTool(page, 'text')
   await page.mouse.click(box.x + 360, box.y + 530)
   await page.locator('.excalidraw-wysiwyg').fill('模型网关 → PostgreSQL')
   await page.keyboard.press('Escape')
@@ -82,7 +88,7 @@ test('drawing tools create movable rectangles, connected arrows, lines, freehand
   expect(arrow.endBinding?.elementId).toBe(before.elements.filter(element => element.type === 'rectangle')[1].id)
   expect(before.elements.find(element => element.type === 'freedraw')!.points!.length).toBeGreaterThan(4)
   expect(before.elements.find(element => element.type === 'text')!.text).toBe('模型网关 → PostgreSQL')
-  await page.getByTestId('toolbar-selection').click()
+  await selectTool(page, 'selection')
   await page.mouse.move(box.x + 430, box.y + 200)
   await page.mouse.down()
   await page.mouse.move(box.x + 460, box.y + 170, { steps: 8 })
@@ -92,7 +98,7 @@ test('drawing tools create movable rectangles, connected arrows, lines, freehand
   await mkdir('.impeccable/review', { recursive: true })
   await page.screenshot({ path: '.impeccable/review/topology-drawing-desktop.png', animations: 'disabled' })
   await page.getByRole('button', { name: '业务架构', exact: true }).click()
-  await expect(page.getByLabel('模块名称')).toHaveValue(seed.modules[0].name)
+  await expect(page.getByLabel('模块名称')).toHaveValue(seed.modules.find(module => module.id === 'M01')!.name)
   await openDrawing(page)
   await expect.poll(async () => (await scene(page)).elements.length).toBe(6)
   await page.reload()
