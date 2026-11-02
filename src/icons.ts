@@ -12,7 +12,7 @@ const actions: Record<string, string> = {
   github: 'logos:github-icon', cloudflare: 'logos:cloudflare', azure: 'logos:microsoft-azure',
   canvas: 'lucide:workflow', list: 'lucide:clipboard-check', technology: 'lucide:cpu',
   original: 'lucide:book-open', layer: 'lucide:layers', person: 'lucide:contact-round',
-  help: 'lucide:book-open', lock: 'lucide:lock-keyhole',
+  help: 'lucide:book-open', lock: 'lucide:lock-keyhole', submit: 'lucide:send',
 }
 const brandPatterns: [RegExp, string][] = [
   [/\bAzure\b/i, 'logos:microsoft-azure'], [/\bCloudflare\b/i, 'logos:cloudflare'],

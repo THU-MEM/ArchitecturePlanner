@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import seed from '../src/seed-plan.json' with { type: 'json' }
+import seed from './fixture.ts'
 import { assignOwners, validatePlan } from '../src/plan.ts'
 import { mergeGitHubParticipants } from '../src/participants.ts'
 

@@ -41,7 +41,7 @@ Hairline borders and tonal layering lead; soft offset shadows distinguish select
 Compact rounded controls and nodes, without decorative panels.
 
 ## Components
-Icon-only actions have accessible names and tooltips. Native owner controls retain names. Details and the component palette expand only when requested. Local/shared status, errors and replacement warnings remain explicit.
+Icon-only actions have accessible names and tooltips. Native owner controls retain names. Details and the component palette expand only when requested. Published/draft status, PR links, errors and replacement warnings remain explicit.
 
 ## Do's and Don'ts
 Do preserve original SVG colors and keyboard focus. Do keep assignments visibly actionable. Don't replace meaningful names with ambiguous logos or imply that local data is shared.

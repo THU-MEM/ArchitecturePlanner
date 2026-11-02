@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import seed from './seed-plan.json'
+import publishedUrl from './seed-plan.json?url'
 import { addPerson, assignOwners, assignComponentOwners, layers, MAX_PLAN_BYTES, statuses, updateModule, validatePlan } from './plan.ts'
 import type { Component, Module, Plan } from './plan.ts'
 import Canvas from './Canvas.tsx'
 import CurrentArchitecture, { ImplementationContext } from './CurrentArchitecture.tsx'
-import { cloudRequest } from './cloud.ts'
+import { SubmissionError, submitPlanPullRequest } from './github.ts'
 import Icon, { IconButton } from './Icon.tsx'
 import { componentIcons, moduleIcon, uiIcon } from './icons.ts'
 import { mergeGitHubParticipants } from './participants.ts'
@@ -18,14 +18,14 @@ type Tab = typeof tabs[number]
 const tabIcons = ['layer', 'canvas', 'list', 'technology', 'users', 'original']
 const participants: unknown = JSON.parse(import.meta.env.VITE_GITHUB_PARTICIPANTS ?? '[]')
 
-function initialDraft() {
+function readDraft() {
   try {
     const raw = localStorage.getItem(storageKey)
-    return { plan: mergeGitHubParticipants(raw ? validatePlan(JSON.parse(raw)) : validatePlan(seed), participants), error: '' }
+    return { draft: raw ? mergeGitHubParticipants(validatePlan(JSON.parse(raw)), participants) : null, error: '' }
   } catch (error) {
     return {
-      plan: mergeGitHubParticipants(validatePlan(seed), participants),
-      error: `无法读取本地草稿：${error instanceof Error ? error.message : String(error)}。原草稿未覆盖，请先导出备份或修正后重新导入。`,
+      draft: null,
+      error: `无法读取本地草稿：${error instanceof Error ? error.message : String(error)}。原草稿未覆盖，可导入已有备份。`,
     }
   }
 }
@@ -109,8 +109,34 @@ function OwnerEditor({ module, plan, onApply, onTeam }: { module: Module; plan: 
 }
 
 export default function App() {
-  const [initial] = useState(initialDraft)
-  const [plan, setPlan] = useState(initial.plan)
+  const [published, setPublished] = useState<Plan | null>(null)
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    async function load() {
+      try {
+        const response = await fetch(publishedUrl, {
+          cache: 'no-store',
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+        })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        setPublished(mergeGitHubParticipants(validatePlan(await response.json()), participants))
+      } catch (error) {
+        if (!controller.signal.aborted) setError(`已发布规划加载失败：${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+    void load()
+    return () => controller.abort()
+  }, [attempt])
+  if (published) return <Planner published={published} />
+  return <main className="loading-plan">{error ? <><p className="error" role="alert">{error}</p><button onClick={() => { setError(''); setAttempt(value => value + 1) }}>重新加载</button></> : <p role="status">正在加载已发布规划…</p>}</main>
+}
+
+function Planner({ published }: { published: Plan }) {
+  const [initial] = useState(readDraft)
+  const [savedDraft, setSavedDraft] = useState(initial.draft)
+  const [plan, setPlan] = useState(published)
   const [tab, setTab] = useState<Tab>('架构画布')
   const [query, setQuery] = useState('')
   const [layer, setLayer] = useState('')
@@ -119,22 +145,25 @@ export default function App() {
   const [selectedComponent, setSelectedComponent] = useState('workspace')
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState(initial.error)
-  const [notice, setNotice] = useState('本地草稿')
+  const [notice, setNotice] = useState('已发布规划 · 修改后通过 PR 提交')
   const [personName, setPersonName] = useState('')
-  const [cloudOpen, setCloudOpen] = useState(false)
-  const [apiUrl, setApiUrl] = useState(import.meta.env.VITE_PLANNER_API_URL ?? '')
+  const [submissionOpen, setSubmissionOpen] = useState(false)
+  const [description, setDescription] = useState('')
   const [token, setToken] = useState('')
-  const [revision, setRevision] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
-  const [pendingCloud, setPendingCloud] = useState<{ plan: Plan; revision: number } | null>(null)
+  const [submitted, setSubmitted] = useState<{ plan: Plan; url: string } | null>(null)
+  const [branchUrl, setBranchUrl] = useState<string | undefined>()
+  const [pendingImport, setPendingImport] = useState<Plan | null>(null)
   const [localSaved, setLocalSaved] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const planRef = useRef(plan)
-  function replacePlan(next: Plan, changed: boolean) {
+  function apply(next: Plan) {
     planRef.current = next
     setPlan(next)
-    setDirty(changed)
+    setSavedDraft(null)
+    setDirty(true)
     setError('')
+    setNotice('已应用 · 本地草稿，尚未提交 PR')
     try {
       localStorage.setItem(storageKey, JSON.stringify(next))
       setLocalSaved(true)
@@ -152,10 +181,6 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [dirty, localSaved])
 
-  function apply(next: Plan) {
-    replacePlan(next, true)
-    setNotice('已应用 · 本地草稿，尚未共享')
-  }
   const visible = plan.modules.filter(module => {
     const names = module.owners.map(owner => plan.people.find(person => person.id === owner.personId)?.name ?? '').join(' ')
     return (!layer || module.layer === layer)
@@ -187,41 +212,30 @@ export default function App() {
       if (file.size > MAX_PLAN_BYTES) throw new Error('文件不能超过 512 KiB')
       const next = mergeGitHubParticipants(validatePlan(JSON.parse(await file.text())), participants)
       if (dirty) {
-        setPendingCloud({ plan: next, revision: -1 })
+        setPendingImport(next)
         setNotice('导入文件已校验。确认后将替换当前草稿；建议先导出备份。')
       } else {
         apply(next)
         setSelected(next.modules[0]?.id ?? '')
-        setRevision(null)
       }
     } catch (error) {
       setError(`导入失败，现有规划未修改：${error instanceof Error ? error.message : String(error)}`)
     }
   }
-  async function cloud(action: 'load' | 'save') {
+  async function submit(event: FormEvent) {
+    event.preventDefault()
     setBusy(true)
     setError('')
+    setBranchUrl(undefined)
     const snapshot = planRef.current
     try {
-      const result = await cloudRequest(apiUrl, token, action === 'save' ? { plan: snapshot, revision: revision! } : undefined)
-      if (action === 'load') {
-        result.plan = mergeGitHubParticipants(result.plan, participants)
-        if (dirty || planRef.current !== snapshot) {
-          setPendingCloud(result)
-          setNotice('共享规划已读取，尚未覆盖本地修改。请确认替换或保留草稿。')
-        } else {
-          replacePlan(result.plan, false)
-          setRevision(result.revision)
-          setSelected(result.plan.modules[0]?.id ?? '')
-          setNotice('共享规划已读取 · 修改需手动保存')
-        }
-      } else {
-        setRevision(result.revision)
-        if (planRef.current === snapshot) setDirty(false)
-        setNotice(planRef.current === snapshot ? '已保存到共享库。' : '请求发出时的快照已保存；你随后做的修改仍未同步。')
-      }
+      const url = await submitPlanPullRequest(snapshot, token, description)
+      setSubmitted({ plan: snapshot, url })
+      setToken('')
+      setNotice(planRef.current === snapshot ? 'PR 已创建 · 审核合入后发布' : '提交时的草稿已创建 PR · 合入后发布；后续修改尚未提交')
     } catch (error) {
-      setError(`共享 API 操作失败：${error instanceof Error ? error.message : String(error)}。本地规划仍保留；不要在不确定时反复保存。`)
+      setError(error instanceof Error ? error.message : String(error))
+      if (error instanceof SubmissionError) setBranchUrl(error.branchUrl)
     } finally {
       setBusy(false)
     }
@@ -232,7 +246,7 @@ export default function App() {
       <div className="wordmark"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 4h9v9H4zm15 0h9v9h-9zM4 19h9v9H4zm15 0h9v9h-9z" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M13 8h6M8 13v6m16-6v6m-11 5h6" fill="none" stroke="currentColor" strokeWidth="2" /></svg><span>ArchitecturePlanner</span></div>
       <div className="header-actions">
         <IconButton icon="upload" label="导入规划" onClick={() => fileRef.current?.click()} /><IconButton icon="download" label="导出规划" onClick={exportPlan} />
-        <IconButton icon="cloudflare" label="共享 API" className="primary" onClick={() => setCloudOpen(!cloudOpen)} aria-expanded={cloudOpen} />
+        <IconButton icon="submit" label="提交 PR" className="primary" disabled={busy} onClick={() => { setSubmissionOpen(!submissionOpen); setToken('') }} aria-expanded={submissionOpen} />
         <a className="icon-button" href="https://github.com/THU-MEM/ArchitecturePlanner" target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><Icon icon={uiIcon('github')} decorative /></a>
       </div>
       <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={event => {
@@ -241,21 +255,21 @@ export default function App() {
         event.target.value = ''
       }} />
     </header>
-    {cloudOpen && <section className="cloud-panel" aria-label="共享 API 配置">
-      <div className="cloud-identity"><Icon icon={uiIcon('cloudflare')} /><div><h2>共享 API</h2><p>仅连接可信服务。Token 仅留本页。</p></div></div>
-      <label>API 地址<input type="url" disabled={busy} placeholder="https://your-worker.workers.dev" value={apiUrl} onChange={event => { setApiUrl(event.target.value); setRevision(null); setPendingCloud(pending => pending && pending.revision >= 0 ? null : pending) }} /></label>
-      <label>编辑 token<input type="password" disabled={busy} autoComplete="off" value={token} onChange={event => { setToken(event.target.value); setRevision(null); setPendingCloud(pending => pending && pending.revision >= 0 ? null : pending) }} /></label>
-      <div className="actions"><IconButton icon="download" label={busy ? '请求处理中…' : '读取共享规划'} disabled={busy || !apiUrl || !token} onClick={() => void cloud('load')} /><IconButton icon="upload" label="保存到共享库" className="primary" disabled={busy || revision === null || !dirty} onClick={() => void cloud('save')} /></div>
-      <p className="muted">先读取，再保存；冲突不会覆盖他人修改。</p>
-    </section>}
-    {error && <div className="message error" role="alert">{error}<button aria-label="关闭错误提示" onClick={() => setError('')}>关闭</button></div>}
-    {pendingCloud && <section className="replace-panel"><p>将替换当前草稿。尚未导出的修改可能丢失，请先备份。</p><button onClick={exportPlan}>先导出当前规划</button><button className="primary" onClick={() => {
-      replacePlan(pendingCloud.plan, true)
-      setSelected(pendingCloud.plan.modules[0]?.id ?? '')
-      setRevision(pendingCloud.revision < 0 ? null : pendingCloud.revision)
-      setPendingCloud(null)
+    {submissionOpen && <form className="submission-panel" aria-label="提交规划 PR" onSubmit={submit}>
+      <div className="submission-identity"><Icon icon={uiIcon('github')} /><div><h2>提交 PR</h2><p>审核合入后发布。Token 仅留本页。</p></div></div>
+      <label>修改说明<input disabled={busy} value={description} onChange={event => setDescription(event.target.value)} maxLength={120} placeholder="调整模块分工" required /></label>
+      <label>GitHub Token<input type="password" disabled={busy} autoComplete="off" spellCheck={false} value={token} onChange={event => setToken(event.target.value)} maxLength={512} required /></label>
+      <div className="actions"><button type="submit" className="primary" disabled={busy || !dirty || !token.trim() || !description.trim() || submitted?.plan === plan}><Icon icon={uiIcon('submit')} decorative />{busy ? '正在提交…' : '创建 Pull Request'}</button>{submitted && <a href={submitted.url} target="_blank" rel="noreferrer">查看 PR</a>}</div>
+      <details className="submission-help"><summary>GitHub 授权与公开范围</summary><p>需要本仓库写权限。<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">创建细粒度 Token</a>，仅选择 ArchitecturePlanner，授予 Contents、Pull requests 读写权限；组织可能要求审批。Token 不能限制到单个文件。提交的规划、参与者昵称和分工将进入公开仓库，不要填写凭证或其他个人资料。</p></details>
+    </form>}
+    {savedDraft && <section className="draft-panel"><p>有一份本地草稿，当前展示已发布规划。</p><button onClick={() => apply(savedDraft)}>恢复本地草稿</button></section>}
+    {error && <div className="message error" role="alert"><div>{error}{branchUrl && <p><a href={branchUrl} target="_blank" rel="noreferrer">检查分支 / 手动创建 PR</a></p>}</div><button aria-label="关闭错误提示" onClick={() => setError('')}>关闭</button></div>}
+    {pendingImport && <section className="replace-panel"><p>将替换当前草稿。尚未导出的修改可能丢失，请先备份。</p><button onClick={exportPlan}>先导出当前规划</button><button className="primary" onClick={() => {
+      apply(pendingImport)
+      setSelected(pendingImport.modules[0]?.id ?? '')
+      setPendingImport(null)
       setNotice('规划已替换并保存为本地草稿。')
-    }}>确认替换草稿</button><button onClick={() => setPendingCloud(null)}>保留当前草稿</button></section>}
+    }}>确认替换草稿</button><button onClick={() => setPendingImport(null)}>保留当前草稿</button></section>}
     <div className="workspace-heading"><div><h1>架构规划台</h1><p>{plan.name}</p></div><button className="current-entry" aria-label="查看 SSO 与 MEM-AI 现状" onClick={() => setTab('项目现状')}><Icon icon={uiIcon('layer')} decorative />SSO · MEM-AI</button><div className="progress-label"><strong>{assigned}/{plan.modules.length + plan.components.length}</strong><span>已分配</span></div></div>
     <div className={`workspace-shell ${tab === '项目现状' ? 'current-shell' : ''}`}>
       <aside className="sidebar">
@@ -264,7 +278,7 @@ export default function App() {
           <label>架构层<select value={layer} onChange={event => setLayer(event.target.value)}><option value="">全部架构层</option>{[...new Set(plan.modules.map(module => module.layer))].map(id => <option value={id} key={id}>{layers[id] ?? id}</option>)}</select></label>
           <label>Owner 筛选<select value={ownerFilter} onChange={event => setOwnerFilter(event.target.value)}><option value="">全部成员</option><option value="unassigned">尚未分配</option>{plan.people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
         </div>}
-        <div className="privacy-note"><Icon icon={uiIcon(revision === null ? 'lock' : 'cloudflare')} decorative /><strong>{revision === null ? '本地草稿' : `共享 v${revision}`}</strong></div>
+        <div className="privacy-note"><Icon icon={uiIcon(dirty ? 'lock' : 'github')} decorative /><strong>{dirty ? '本地草稿' : '已发布规划'}</strong></div>
       </aside>
       <main id="workspace" className={`workspace ${tab === '原始架构' ? 'original' : ''}`}>
         <div className="view-heading"><h2>{tab}</h2>{tab !== '项目现状' && <span>{tab === '团队成员' ? plan.people.length : tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>

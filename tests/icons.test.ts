@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import seed from '../src/seed-plan.json' with { type: 'json' }
+import seed from './fixture.ts'
 import { componentIcons, moduleIcon, uiIcon } from '../src/icons.ts'
 
 test('original observability components expose their actual full-color technology logos', () => {

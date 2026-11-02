@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test'
-import seed from '../src/seed-plan.json' with { type: 'json' }
+import seed from './fixture.ts'
 import { mkdir } from 'node:fs/promises'
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: seed }))
+})
 
 test('configured GitHub participants are immediately available and can own modules and components', async ({ page }) => {
   await page.goto('./')
@@ -29,6 +33,7 @@ test('configured GitHub participants are immediately available and can own modul
   await page.getByLabel('主 owner').selectOption({ label: 'example-helper' })
   await page.getByRole('button', { name: '应用修改', exact: true }).click()
   await page.reload()
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('architecture-planner.plan.v1')!))
   expect(saved.modules.find((module: { id: string }) => module.id === 'M02').owners).toEqual([{ personId: 'github-101', role: 'primary' }, { personId: 'github-202', role: 'secondary' }])
   expect(saved.components.find((component: { id: string }) => component.id === 'postgres').owners).toEqual([{ personId: 'github-202', role: 'primary' }])
@@ -46,6 +51,7 @@ test('current architecture distinguishes implemented identity and balance flows 
   draft.modules.find(module => module.id === 'M01')!.owners = [{ personId: 'alice', role: 'primary' }]
   await page.addInitScript(plan => localStorage.setItem('architecture-planner.plan.v1', JSON.stringify(plan)), draft)
   await page.goto('./')
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   await page.getByRole('button', { name: '项目现状', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'SSO · MEM-AI', exact: true })).toBeVisible()
   await expect(page.getByText('源码已实现 ≠ 生产已上线', { exact: true })).toBeVisible()
@@ -138,6 +144,7 @@ test('technology components really retain primary and secondary owners after rel
   await page.getByLabel('协作 owner Bob').check()
   await page.getByRole('button', { name: '应用修改', exact: true }).click()
   await page.reload()
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   await page.getByRole('button', { name: '技术组件', exact: true }).click()
   await page.getByRole('button', { name: `${postgres.id} ${postgres.name}`, exact: true }).click()
   await expect(page.getByLabel('主 owner').locator('option:checked')).toHaveText('Alice')
@@ -195,40 +202,9 @@ test('original modules, primary and secondary owner assignment, export and reloa
   const file = await download
   await expect(file.suggestedFilename()).toBe('architecture-plan.json')
   await page.reload()
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   await page.getByRole('button', { name: '分工清单' }).click()
   await expect(page.getByRole('row').filter({ hasText: 'M01' })).toContainText('项目建模')
-})
-
-test('shared loads refresh the inspector and persist locally without storing the token', async ({ page, request }) => {
-  const headers = { Authorization: 'Bearer test-only-not-a-real-secret-1234567890' }
-  const response = await request.get('http://127.0.0.1:8787/api/plan', { headers })
-  const { revision } = await response.json()
-  const plan = structuredClone(seed)
-  const module = plan.modules.find(module => module.id === 'M01')!
-  module.name = 'Shared module'
-  plan.modules = [module, ...plan.modules.filter(module => module.id !== 'M01')]
-  expect((await request.put('http://127.0.0.1:8787/api/plan', { headers, data: { revision, plan } })).status()).toBe(200)
-  await page.goto('./')
-  await page.getByRole('button', { name: '共享 API', exact: true }).click()
-  await page.getByLabel('API 地址').fill('http://127.0.0.1:8787')
-  await page.getByLabel('编辑 token').fill('test-only-not-a-real-secret-1234567890')
-  let release!: () => void
-  const gate = new Promise<void>(resolve => { release = resolve })
-  await page.route('http://127.0.0.1:8787/api/plan', async route => {
-    if (route.request().method() === 'OPTIONS') return route.continue()
-    const response = await route.fetch()
-    await gate
-    await route.fulfill({ response })
-  })
-  await page.getByRole('button', { name: '读取共享规划' }).click()
-  await expect(page.getByLabel('API 地址')).toBeDisabled()
-  await expect(page.getByLabel('编辑 token')).toBeDisabled()
-  release()
-  await expect(page.getByLabel('模块名称')).toHaveValue('Shared module')
-  const stored = await page.evaluate(() => JSON.stringify(localStorage))
-  expect(stored).not.toContain('test-only-not-a-real-secret')
-  await page.reload()
-  await expect(page.getByLabel('模块名称')).toHaveValue('Shared module')
 })
 
 test('canvas layout, relationships and deletion persist in the exported plan', async ({ page }) => {
@@ -258,25 +234,6 @@ test('canvas layout, relationships and deletion persist in the exported plan', a
   await page.keyboard.press('Enter')
   await page.keyboard.press('Delete')
   await expect(page.locator('.react-flow__edge')).toHaveCount(0)
-})
-
-test('a shared revision conflict retains local edits and leaves the other writer intact', async ({ page, request }) => {
-  const headers = { Authorization: 'Bearer test-only-not-a-real-secret-1234567890' }
-  await page.goto('./')
-  await page.getByRole('button', { name: '共享 API', exact: true }).click()
-  await page.getByLabel('API 地址').fill('http://127.0.0.1:8787')
-  await page.getByLabel('编辑 token').fill('test-only-not-a-real-secret-1234567890')
-  await page.getByRole('button', { name: '读取共享规划' }).click()
-  await expect(page.getByRole('status')).toContainText('共享规划已读取')
-  await page.getByLabel('模块名称').fill('Local unsynced module')
-  await page.getByRole('button', { name: '应用修改' }).click()
-  const snapshot = await request.get('http://127.0.0.1:8787/api/plan', { headers }).then(response => response.json())
-  snapshot.plan.name = 'Other writer'
-  expect((await request.put('http://127.0.0.1:8787/api/plan', { headers, data: snapshot })).status()).toBe(200)
-  await page.getByRole('button', { name: '保存到共享库' }).click()
-  await expect(page.getByRole('alert')).toContainText('共享版本已变化')
-  await expect(page.getByLabel('模块名称')).toHaveValue('Local unsynced module')
-  expect((await request.get('http://127.0.0.1:8787/api/plan', { headers }).then(response => response.json())).plan.name).toBe('Other writer')
 })
 
 test('valid imports require explicit replacement of an edited draft', async ({ page }) => {
