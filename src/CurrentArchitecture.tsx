@@ -1,33 +1,36 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from '@xyflow/react'
-import type { Edge, Node, NodeProps, ReactFlowInstance } from '@xyflow/react'
+import type { Node, NodeProps, ReactFlowInstance } from '@xyflow/react'
 import type { Plan } from './plan.ts'
-import { currentFlows, implementationStates, projectFacts } from './current-architecture.ts'
-import type { ProjectFact } from './current-architecture.ts'
+import { implementationStates, projectFacts } from './current-architecture.ts'
+import { runtimeSnapshot, runtimeStates, technicalFacts, technicalFlows } from './technical-architecture.ts'
+import type { TechnicalFact } from './technical-architecture.ts'
+import { layoutGraph } from './graph-layout.ts'
+import type { GraphLayout } from './graph-layout.ts'
+import { DependencyConnector } from './Canvas.tsx'
+import type { DependencyEdge } from './Canvas.tsx'
 import Icon from './Icon.tsx'
 import { componentIcons, uiIcon } from './icons.ts'
 
-type ProjectNode = Node<{ fact: ProjectFact; selected: boolean; onSelect: (id: string) => void }, 'project'>
+type ProjectNode = Node<{ fact: TechnicalFact; selected: boolean; onSelect: (id: string) => void }, 'project'>
 
 function ProjectNodeCard({ data }: NodeProps<ProjectNode>) {
   const { fact, selected, onSelect } = data
   return <>
-    <button className={`project-node nodrag nopan ${fact.state} ${selected ? 'selected-project' : ''}`}
-      aria-label={`查看现状 ${fact.name}`} onClick={() => onSelect(fact.id)}>
-      <span className="project-node-heading"><span>{fact.project}</span><span className={`implementation-state ${fact.state}`}>{implementationStates[fact.state]}</span></span>
+    <button className={`project-node nodrag nopan runtime-${fact.runtime} ${selected ? 'selected-project' : ''}`}
+      aria-label={`查看现状 ${fact.name}`} aria-pressed={selected} title={`${fact.name} · ${runtimeStates[fact.runtime]} · ${fact.stack}`} onClick={() => onSelect(fact.id)}>
+      <span className="project-node-heading"><span>{fact.project}</span><span className={`runtime-state runtime-${fact.runtime}`}>{runtimeStates[fact.runtime]}</span></span>
       <strong>{fact.name}</strong>
       <span className="project-node-stack"><Icon icon={componentIcons({ id: fact.components[0], name: fact.name, detail: fact.detail, stack: fact.stack })[0]} decorative /><span>{fact.stack}</span></span>
     </button>
-    <Handle id="bottom-source" type="source" position={Position.Bottom} isConnectable={false} />
-    <Handle id="top-target" type="target" position={Position.Top} isConnectable={false} />
-    <Handle id="left-source" type="source" position={Position.Left} isConnectable={false} />
-    <Handle id="left-target" type="target" position={Position.Left} isConnectable={false} />
-    <Handle id="right-source" type="source" position={Position.Right} isConnectable={false} />
-    <Handle id="right-target" type="target" position={Position.Right} isConnectable={false} />
+    <Handle type="target" position={Position.Left} isConnectable={false} />
+    <Handle type="source" position={Position.Right} isConnectable={false} />
   </>
 }
 
 const nodeTypes = { project: ProjectNodeCard }
+const edgeTypes = { dependency: DependencyConnector }
+const sizes = Object.fromEntries(technicalFacts.map(fact => [fact.id, { width: 270, height: 142 }]))
 
 export function ImplementationContext({ moduleId, componentId }: { moduleId?: string; componentId?: string }) {
   const facts = projectFacts.filter(fact => (moduleId && fact.modules.includes(moduleId)) || (componentId && fact.components.includes(componentId)))
@@ -41,50 +44,109 @@ export function ImplementationContext({ moduleId, componentId }: { moduleId?: st
 export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   plan: Plan; onComponent: (id: string) => void; onModule: (id: string) => void
 }) {
-  const [selected, setSelected] = useState('mem-gateway')
-  const flowRef = useRef<ReactFlowInstance<ProjectNode, Edge> | null>(null)
-  const fact = projectFacts.find(item => item.id === selected)!
-  const nodes: ProjectNode[] = projectFacts.map(item => ({
-    id: item.id, type: 'project', position: item.position,
+  const [selected, setSelected] = useState('')
+  const [scope, setScope] = useState('all')
+  const [attempt, setAttempt] = useState(0)
+  const [result, setResult] = useState<{ key: string; layout: GraphLayout | null; error: string } | null>(null)
+  const [fittedKey, setFittedKey] = useState('')
+  const flowRef = useRef<ReactFlowInstance<ProjectNode, DependencyEdge> | null>(null)
+  const facts = technicalFacts.filter(item => scope === 'all' || (scope === 'runtime' ? item.runtime === 'ready' || item.runtime === 'blocked' : item.runtime !== 'ready' && item.runtime !== 'blocked'))
+  const flows = technicalFlows.filter(flow => facts.some(item => item.id === flow.source) && facts.some(item => item.id === flow.target))
+  const layoutInput = JSON.stringify({ modules: facts.map(({ id }) => ({ id })), relationships: flows.map(({ id, source, target }) => ({ id, source, target })) })
+  const layoutKey = `${attempt}:${layoutInput}`
+  const layout = result?.key === layoutKey ? result.layout : null
+  const pending = result?.key !== layoutKey || fittedKey !== layoutKey
+  const fact = facts.find(item => item.id === selected)
+  const upstream = new Set(flows.filter(flow => flow.target === selected).map(flow => flow.source))
+  const downstream = new Set(flows.filter(flow => flow.source === selected).map(flow => flow.target))
+  useEffect(() => {
+    let cancelled = false
+    const input: { modules: { id: string }[]; relationships: Plan['relationships'] } = JSON.parse(layoutInput)
+    void layoutGraph(input.modules, input.relationships, sizes).then(value => {
+      if (!cancelled) setResult({ key: layoutKey, layout: value, error: '' })
+    }).catch((error: unknown) => {
+      if (!cancelled) setResult({ key: layoutKey, layout: null, error: `技术架构自动布局失败：${error instanceof Error ? error.message : String(error)}。请重新布局重试。` })
+    })
+    return () => { cancelled = true }
+  }, [layoutInput, layoutKey])
+  useEffect(() => {
+    if (!layout) return
+    let cancelled = false
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        void flowRef.current?.fitView({ padding: 0.12, maxZoom: 0.85, minZoom: 0.04 }).then(() => {
+          if (!cancelled) setFittedKey(layoutKey)
+        })
+      })
+    })
+    return () => { cancelled = true; cancelAnimationFrame(frame) }
+  }, [layout, layoutKey])
+  function select(id: string) { setSelected(current => current === id ? '' : id) }
+  const nodes: ProjectNode[] = layout ? facts.map(item => ({
+    id: item.id, type: 'project', position: layout.positions[item.id],
     draggable: false, deletable: false, selectable: false, focusable: false,
-    domAttributes: { ...{ 'data-project': item.id }, title: item.name },
-    data: { fact: item, selected: selected === item.id, onSelect: setSelected },
-  }))
-  const edges: Edge[] = currentFlows.map(flow => ({
-    id: flow.id, source: flow.source, target: flow.target, label: flow.sourcePort === flow.targetPort && flow.sourcePort ? undefined : flow.label, type: 'smoothstep',
-    sourceHandle: `${flow.sourcePort ?? 'bottom'}-source`, targetHandle: `${flow.targetPort ?? 'top'}-target`,
+    className: [upstream.has(item.id) && 'node-upstream', downstream.has(item.id) && 'node-downstream', fact && item.id !== selected && !upstream.has(item.id) && !downstream.has(item.id) && 'node-dimmed'].filter(Boolean).join(' '),
+    zIndex: selected === item.id ? 3 : upstream.has(item.id) || downstream.has(item.id) ? 2 : 0,
+    domAttributes: { ...{ 'data-project': item.id, 'data-runtime': item.runtime }, title: item.observation },
+    data: { fact: item, selected: selected === item.id, onSelect: select },
+  })) : []
+  const edges: DependencyEdge[] = layout ? flows.map(flow => {
+    const color = fact && flow.target === selected ? '#2167ad' : fact && flow.source === selected ? '#a34d12' : '#718592'
+    return {
+    id: flow.id, source: flow.source, target: flow.target, type: 'dependency',
+    data: { points: layout.routes[flow.id] },
     selectable: false, focusable: false, deletable: false,
-    domAttributes: { ...{ 'data-flow': flow.id, 'data-state': flow.state }, 'aria-description': flow.detail },
-    style: { stroke: flow.state === 'planned' ? '#765921' : '#54778b', strokeDasharray: flow.state === 'planned' ? '6 5' : undefined },
-    markerEnd: { type: MarkerType.ArrowClosed, color: flow.state === 'planned' ? '#765921' : '#54778b' },
-    labelStyle: { fill: '#213c51', fontSize: 11 },
-    labelBgStyle: { fill: '#f4f8fa', fillOpacity: 0.95 },
-  }))
+    domAttributes: { ...{ 'data-flow': flow.id, 'data-evidence': flow.evidence }, 'aria-description': `${flow.label}：${flow.detail}` },
+    style: { stroke: color, strokeWidth: 1.6, strokeDasharray: flow.evidence === 'observed' ? undefined : flow.evidence === 'planned' ? '2 5' : '7 5', opacity: fact && flow.source !== selected && flow.target !== selected ? 0.25 : 1 },
+    markerEnd: { type: MarkerType.ArrowClosed, color },
+  }}) : []
   return <section className="current-architecture" aria-label="当前项目架构">
-    <div className="current-heading"><h3>SSO · MEM-AI</h3><p>源码已实现 ≠ 生产已上线</p></div>
-    <div className="current-legend"><span className="implemented">实线 · 已有代码</span><span className="planned">虚线 · 待接入</span><span>核对：2026-11-02 · 未访问生产环境</span></div>
-    <label className="current-picker">项目组件<select value={selected} onChange={event => {
-      const id = event.target.value
-      const node = nodes.find(item => item.id === id)!
-      setSelected(id)
-      void flowRef.current?.setCenter(node.position.x + 125, node.position.y + 58, { zoom: 0.9 })
-    }}>{projectFacts.map(item => <option key={item.id} value={item.id}>{item.project} · {item.name}</option>)}</select></label>
-    <div className="current-map">
-      <ReactFlow<ProjectNode, Edge> nodes={nodes} nodeTypes={nodeTypes} edges={edges} onInit={instance => { flowRef.current = instance }} onNodeClick={(_, node) => setSelected(node.id)} defaultViewport={{ x: 20, y: 18, zoom: 0.9 }} minZoom={0.25} maxZoom={1.5}
+    <div className="current-heading"><h3>Kubernetes · 服务与数据</h3><p>源码已实现 ≠ 生产已上线</p></div>
+    <p className="runtime-summary">SSH 核对：{runtimeSnapshot.inspectedAt} · {runtimeSnapshot.nodes} 节点 / {runtimeSnapshot.pods} Pod · {runtimeSnapshot.running} Running / {runtimeSnapshot.pending} Pending · 只读快照，非实时监控</p>
+    <div className="technical-toolbar">
+    <label>范围<select aria-label="技术架构范围" value={scope} onChange={event => { setScope(event.target.value); setSelected('') }}><option value="all">全部技术组件</option><option value="runtime">运行现场</option><option value="source">源码与待接入</option></select></label>
+    <label className="current-picker">项目组件<select value={selected} disabled={pending} onChange={event => {
+      const node = nodes.find(item => item.id === event.target.value)
+      setSelected(event.target.value)
+      if (node) void flowRef.current?.setCenter(node.position.x + 135, node.position.y + 71, { zoom: 0.9 })
+    }}><option value="">未选中</option>{facts.map(item => <option key={item.id} value={item.id}>{item.project} · {item.name}</option>)}</select></label>
+    <button type="button" disabled={pending && !result?.error} onClick={() => setAttempt(value => value + 1)}>重新布局</button>
+    <button type="button" disabled={pending} onClick={() => void flowRef.current?.fitView({ padding: 0.12, minZoom: 0.04 })}>适应全图</button>
+    <span className="technical-edge-legend">实线：现场资源关系 · 虚线：源码 / 模板 · 点线：待接入</span>
+    </div>
+    {result?.key === layoutKey && result.error && <p className="error" role="alert">{result.error}</p>}
+    {pending && !result?.error && <p className="technical-layout-status" role="status">正在自动布局…</p>}
+    <div className="technical-body"><div className="current-map">
+      <ReactFlow<ProjectNode, DependencyEdge> nodes={nodes} nodeTypes={nodeTypes} edges={edges} edgeTypes={edgeTypes} onInit={instance => { flowRef.current = instance }} onPaneClick={() => setSelected('')} minZoom={0.04} maxZoom={1.5}
         nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} deleteKeyCode={null} proOptions={{ hideAttribution: false }}>
         <Background gap={24} color="#d8e3e9" /><Controls showInteractive={false} />
       </ReactFlow>
     </div>
     <section className="current-detail" aria-label="项目实现详情">
-      <div className="section-title"><h3>{fact.name}</h3><span className={`implementation-state ${fact.state}`}>{implementationStates[fact.state]}</span></div>
+      {fact ? <>
+      <div className="section-title"><h3>{fact.name}</h3><span className={`runtime-state runtime-${fact.runtime}`}>{runtimeStates[fact.runtime]}</span></div>
+      <p className="runtime-observation">{fact.observation}</p>
       <p className="current-stack">{fact.stack}</p><p>{fact.detail}</p>
       {fact.id === 'balance-integration' && <p>服务凭证仅用于余额查询，不是模型 API key，也不是用户 SSO token。</p>}
+      <div className="technical-dependencies">{(['upstream', 'downstream'] as const).map(direction => <section key={direction}><h4>{direction === 'upstream' ? '上游 → 当前' : '当前 → 下游'}</h4>
+        {flows.filter(flow => direction === 'upstream' ? flow.target === selected : flow.source === selected).map(flow => {
+          const other = technicalFacts.find(item => item.id === (direction === 'upstream' ? flow.source : flow.target))!
+          return <button type="button" className={`technical-${direction}`} key={flow.id} onClick={() => {
+            setSelected(other.id)
+            const node = nodes.find(item => item.id === other.id)!
+            void flowRef.current?.setCenter(node.position.x + 135, node.position.y + 71, { zoom: 0.9 })
+          }}>{other.name}<small>{flow.label} · {flow.evidence === 'observed' ? '现场资源' : flow.evidence === 'source' ? '源码 / 模板' : '待接入'}</small></button>
+        })}
+        {!flows.some(flow => direction === 'upstream' ? flow.target === selected : flow.source === selected) && <p className="muted">无已记录关系</p>}
+      </section>)}</div>
       <div className="current-links">{fact.components.filter(id => plan.components.some(component => component.id === id)).map(id => <button key={id} aria-label={`分配组件 ${id}`} title={plan.components.find(component => component.id === id)!.name} onClick={() => onComponent(id)}><Icon icon={uiIcon('person')} decorative />{id}</button>)}
         {fact.modules.filter(id => plan.modules.some(module => module.id === id)).map(id => <button key={id} aria-label={`分配模块 ${id}`} onClick={() => onModule(id)}>{id}</button>)}</div>
       <details className="compact-detail"><summary>来源与边界</summary>
+        <p>{implementationStates[fact.state]}；源码状态与运行状态分开记录。</p>
         {fact.sources.map(source => <p key={source.label}>{source.href ? <a href={source.href} target="_blank" rel="noreferrer">{source.label}</a> : source.label}</p>)}
-        <p>SSO 依据 AI-MEM 内的源码快照；MEM-AI 依据公开上游源码，本仓尚未导入为子模块。AIMEM-LLMWiki 与 Case Management 是独立应用，平台身份接入仍待完成。规划台本身仍是本地模式，未接入 SSO；owner 不是登录账号或权限。</p>
+        <p>SSO 与独立业务依据 AI-MEM 源码；MEM-AI 已通过子模块引用。资源就绪不等于业务验收，集群未见不代表其他机器未运行。规划台未接入 SSO；owner 不是登录账号或权限。</p>
       </details>
-    </section>
+      </> : <><h3>技术组件详情</h3><p>点击卡片查看运行状态、来源与连接；再次点击取消选中。</p><div className="runtime-legend">{Object.entries(runtimeStates).map(([state, label]) => <span className={`runtime-state runtime-${state}`} key={state}>{label}</span>)}</div><p>{runtimeSnapshot.method}</p><p>箭头按标注表示调用、承载、配置或存储关系；实线只证明现场资源或配置存在，不保证端到端业务可用。虚线与点线不是线上链路。</p></>}
+    </section></div>
   </section>
 }

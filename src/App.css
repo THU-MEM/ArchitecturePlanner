@@ -84,6 +84,19 @@ fieldset { border: 1px solid var(--line); border-radius: 6px; padding: 13px; min
 legend { color: #2a5266; font-size: 13px; font-weight: 600; padding: 0 5px; }
 fieldset p { margin-top: 10px; }
 .owner-options { display: grid; gap: 7px; margin-top: 13px; }
+.owner-options .check { flex-wrap: wrap; border: 1px solid transparent; border-radius: 6px; padding: 5px; }
+.owner-options .person-current { background: #e6f3f5; border-color: var(--accent); }
+.owner-options .person-upstream { background: #e8eff7; border-color: #164b87; box-shadow: 0 3px 12px #164b8740; }
+.owner-options .person-downstream { background: #fff6d8; border-color: #b58b22; box-shadow: 0 3px 12px #ffe599c4; }
+.owner-options .person-upstream.person-downstream { background: #edf2eb; box-shadow: -3px 3px 10px #164b8740, 3px 3px 10px #ffe599c4; }
+.owner-options .person-current { outline: 1px solid var(--accent); outline-offset: 1px; }
+.owner-options .person-unrelated { opacity: .5; }
+.owner-options .person-unrelated:hover, .owner-options .person-unrelated:focus-within { opacity: 1; }
+.owner-options .owner-relation { width: 100%; margin: 0 0 0 24px; color: #35556a; }
+.related-upstream button { background: #e8eff7; border-color: #164b87; box-shadow: 0 3px 10px #164b8730; }
+.related-downstream button { background: #fff6d8; border-color: #b58b22; box-shadow: 0 3px 10px #ffe59999; }
+.related-modules .dependency-owners { font-size: 11px; overflow-wrap: anywhere; min-width: 0; }
+.related-modules:has(.dependency-owners) button { flex-wrap: wrap; max-width: 100%; text-align: left; }
 .check { display: flex; align-items: center; gap: 8px; font-weight: 400; }
 .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .check small { font-size: 10px; margin-left: 8px; color: var(--muted); }
@@ -137,20 +150,51 @@ td small { display: block; max-width: 300px; color: var(--muted); font-size: 11p
 .current-legend .implemented { color: #24634f; }
 .current-legend .planned { color: #765921; }
 .current-map { height: 660px; background: #f4f8fa; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.current-map .react-flow__node-project { width: 250px; padding: 0; border: 0; background: none; }
+.current-map .react-flow__node-project { width: 270px; height: 142px; padding: 0; border: 0; background: none; }
 .current-picker { display: flex; align-items: center; gap: 14px; padding: 0 23px 18px; font-size: 12px; }
 .current-picker select { width: auto; max-width: 100%; min-width: 0; }
-.project-node { width: 100%; min-height: 116px; padding: 0; text-align: left; border-color: #aabecb; background: #fff; color: #213c51; border-radius: 7px; }
-.project-node strong { display: block; padding: 10px 12px; font-size: 16px; }
-.project-node-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #e8eff7; padding: 9px 12px; border-radius: 6px 6px 0 0; font-size: 11px; }
+.project-node { width: 100%; height: 142px; padding: 0; text-align: left; border-color: #aabecb; background: #fff; color: #213c51; border-radius: 7px; display: flex; flex-direction: column; overflow: hidden; }
+.project-node strong { display: block; padding: 10px 12px; font-size: 16px; width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.project-node-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: #e8eff7; padding: 9px 12px; border-radius: 6px 6px 0 0; font-size: 11px; }
 .project-node.planned { border-style: dashed; }
 .project-node.planned .project-node-heading { background: #f5ecd7; color: #765921; }
 .project-node.selected-project { border-color: var(--accent); box-shadow: 0 4px 16px #17697626; }
-.project-node-stack { display: flex; align-items: center; gap: 9px; padding: 0 12px 12px; font-size: 11px; color: var(--muted); }
+.project-node-stack { display: flex; align-items: center; gap: 9px; padding: 0 12px 12px; font-size: 11px; color: var(--muted); width: 100%; margin-top: auto; }
+.project-node-stack > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .project-node-stack .icon { width: 28px; height: 28px; flex-shrink: 0; }
 .implementation-state { font-size: 10px; font-weight: 500; color: #24634f; }
 .implementation-state.planned { color: #765921; }
 .current-detail { padding: 23px; max-width: 85ch; font-size: 13px; }
+.current-architecture { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.runtime-summary { padding: 0 23px 12px; color: var(--muted); font-size: 11px; }
+.technical-toolbar { display: flex; gap: 10px; align-items: center; padding: 8px 12px; overflow-x: auto; border-top: 1px solid var(--line); scrollbar-width: thin; }
+.technical-toolbar > * { flex-shrink: 0; }
+.technical-toolbar label { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-size: 12px; }
+.technical-toolbar select { width: auto; max-width: 230px; }
+.technical-toolbar .current-picker { padding: 0; }
+.technical-edge-legend { font-size: 11px; color: #526779; }
+.technical-body { display: grid; grid-template-columns: minmax(0, 1fr) 310px; flex: 1; min-height: 0; }
+.technical-body .current-map { min-height: 0; height: auto; }
+.technical-body .current-detail { min-width: 0; overflow-y: auto; border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: #f9fbfc; }
+.current-detail .section-title { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+.runtime-state { display: inline-block; font-size: 11px; color: #4a6376; background: #edf2f5; border: 1px solid #bdcdd6; border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+.runtime-state.runtime-ready { color: #1c664b; background: #def2e9; border-color: #90bca9; }
+.runtime-state.runtime-blocked { color: #883c24; background: #fff0e8; border-color: #c9947b; }
+.runtime-state.runtime-not-observed, .runtime-state.runtime-planned { color: #765921; background: #f5ecd7; border-color: #cbb88c; }
+.runtime-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.runtime-observation { padding: 12px; background: #edf3f6; border: 1px solid var(--line); border-radius: 6px; }
+.technical-layout-status { font-size: 12px; padding: 8px 23px; }
+.technical-dependencies { display: grid; gap: 18px; margin-top: 20px; }
+.technical-dependencies h4 { margin-bottom: 8px; }
+.technical-dependencies button { display: block; width: 100%; text-align: left; margin-top: 6px; }
+.technical-dependencies small { display: block; color: #526779; font-size: 11px; margin-top: 4px; }
+.technical-dependencies .technical-upstream { border-color: #2167ad; background: #e8eff7; }
+.technical-dependencies .technical-downstream { border-color: #b58b22; background: #fff6d8; }
+.current-map .node-upstream .project-node { border-color: #164b87; box-shadow: 0 4px 22px 6px #164b8780; }
+.current-map .node-downstream .project-node { border-color: #b58b22; box-shadow: 0 4px 22px 8px #ffe599c4; }
+.current-map .node-upstream.node-downstream .project-node { box-shadow: -6px 3px 20px 5px #164b8780, 6px 3px 20px 7px #ffe599c4; }
+.current-map .node-dimmed .project-node { opacity: .28; }
+.current-map .node-dimmed .project-node:focus-visible { opacity: 1; }
 .current-detail > p { margin-top: 9px; }
 .current-stack { color: var(--accent); font-weight: 600; }
 .current-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
@@ -234,6 +278,9 @@ footer span { flex-shrink: 0; }
   .editor { grid-template-columns: 1fr 1fr; gap: 18px; }
   .section-title, .editor > fieldset, .editor > .mapping, .editor > .error { grid-column: 1 / -1; }
   .canvas { height: clamp(500px, calc(100dvh - 300px), 650px); }
+  .technical-body { grid-template-columns: minmax(0, 1fr); }
+  .technical-body .current-map { height: 580px; }
+  .technical-body .current-detail { border-left: 0; }
 }
 @media(max-width: 700px) {
   .app-header { padding: 16px; flex-direction: column; align-items: flex-start; gap: 15px; }
@@ -257,6 +304,8 @@ footer span { flex-shrink: 0; }
   .workspace.original, .inspector { grid-column: 1; }
   .editor { grid-template-columns: 1fr; }
   .canvas { height: 530px; }
+  .technical-body .current-map { height: 530px; }
+  .runtime-summary { padding-left: 16px; padding-right: 16px; }
   .view-heading, .view-hint { padding-left: 16px; padding-right: 16px; }
   .submission-panel { padding: 20px 16px; grid-template-columns: 1fr; }
   .submission-panel .actions, .submission-help { grid-column: 1; flex-wrap: wrap; }

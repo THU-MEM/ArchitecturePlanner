@@ -21,8 +21,8 @@ function ModuleNode({ data }: NodeProps<PlannerNode>) {
   </div>
 }
 const nodeTypes = { module: ModuleNode }
-type DependencyEdge = Edge<{ points?: { x: number; y: number }[] }, 'dependency'>
-function DependencyConnector(props: EdgeProps<DependencyEdge>) {
+export type DependencyEdge = Edge<{ points?: { x: number; y: number }[] }, 'dependency'>
+export function DependencyConnector(props: EdgeProps<DependencyEdge>) {
   const points = props.data?.points
   const path = points?.length
     ? points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ')
