@@ -139,35 +139,36 @@ test('all assigned avatars fit a module even when its technology logos fill the 
       return avatar.width > 0 && avatar.left >= box.left && avatar.right <= box.right && avatar.top >= box.top && avatar.bottom <= box.bottom
     })
 
-    test('authorized avatar initials render consistently across team, ownership editor, canvas and list without changing plan data', async ({ page }) => {
-      const plan = structuredClone(seed)
-      plan.people = [{ id: 'github-8344245', name: 'HydraXman' }]
-      plan.modules.find(module => module.id === 'M01')!.owners = [{ personId: 'github-8344245', role: 'primary' }]
-      await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
-      await page.goto('./')
-      const canvasAvatar = page.locator('.react-flow__node[data-id="M01"]').getByRole('img', { name: '主 owner HydraXman 的头像', exact: true })
-      await expect(canvasAvatar).toBeVisible()
-      expect(await canvasAvatar.evaluate((image: HTMLImageElement) => new DOMParser().parseFromString(decodeURIComponent(image.src.split(',')[1]), 'image/svg+xml').querySelector('text')?.textContent)).toBe('BS')
-      const source = await canvasAvatar.getAttribute('src')
-      await expect(page.locator('.owner-options').getByRole('img', { name: 'HydraXman 的头像', exact: true })).toHaveAttribute('src', source!)
-      await page.getByRole('button', { name: '团队成员', exact: true }).click()
-      await expect(page.locator('.team-list').getByRole('img', { name: 'HydraXman 的头像', exact: true })).toHaveAttribute('src', source!)
-      await expect(page.locator('.team-list').getByRole('link', { name: 'HydraXman', exact: true })).toHaveAttribute('href', 'https://github.com/HydraXman')
-      await page.getByRole('button', { name: '分工清单', exact: true }).click()
-      await expect(page.getByRole('row').filter({ hasText: 'M01' }).getByRole('img', { name: '主 owner HydraXman 的头像', exact: true })).toHaveAttribute('src', source!)
-      expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
-      const download = page.waitForEvent('download')
-      await page.getByRole('button', { name: '导出规划', exact: true }).click()
-      const stream = await (await download).createReadStream()
-      const chunks: Buffer[] = []
-      for await (const chunk of stream!) chunks.push(chunk)
-      expect(JSON.parse(Buffer.concat(chunks).toString('utf8')).people).toEqual([
-        ...plan.people,
-        { id: 'github-101', name: 'example-owner' },
-        { id: 'github-202', name: 'example-helper' },
-      ])
-    })
   })).toBeTruthy()
+})
+
+test('authorized avatar initials render consistently across team, ownership editor, canvas and list without changing plan data', async ({ page }) => {
+  const plan = structuredClone(seed)
+  plan.people = [{ id: 'github-8344245', name: 'HydraXman' }]
+  plan.modules.find(module => module.id === 'M01')!.owners = [{ personId: 'github-8344245', role: 'primary' }]
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  const canvasAvatar = page.locator('.react-flow__node[data-id="M01"]').getByRole('img', { name: '主 owner HydraXman 的头像', exact: true })
+  await expect(canvasAvatar).toBeVisible()
+  expect(await canvasAvatar.evaluate((image: HTMLImageElement) => new DOMParser().parseFromString(decodeURIComponent(image.src.split(',')[1]), 'image/svg+xml').querySelector('text')?.textContent)).toBe('BS')
+  const source = await canvasAvatar.getAttribute('src')
+  await expect(page.locator('.owner-options').getByRole('img', { name: 'HydraXman 的头像', exact: true })).toHaveAttribute('src', source!)
+  await page.getByRole('button', { name: '团队成员', exact: true }).click()
+  await expect(page.locator('.team-list').getByRole('img', { name: 'HydraXman 的头像', exact: true })).toHaveAttribute('src', source!)
+  await expect(page.locator('.team-list').getByRole('link', { name: 'HydraXman', exact: true })).toHaveAttribute('href', 'https://github.com/HydraXman')
+  await page.getByRole('button', { name: '分工清单', exact: true }).click()
+  await expect(page.getByRole('row').filter({ hasText: 'M01' }).getByRole('img', { name: '主 owner HydraXman 的头像', exact: true })).toHaveAttribute('src', source!)
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: '导出规划', exact: true }).click()
+  const stream = await (await download).createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream!) chunks.push(chunk)
+  expect(JSON.parse(Buffer.concat(chunks).toString('utf8')).people).toEqual([
+    ...plan.people,
+    { id: 'github-101', name: 'example-owner' },
+    { id: 'github-202', name: 'example-helper' },
+  ])
 })
 
 test('current architecture distinguishes implemented identity and balance flows from planned client integration', async ({ page }) => {
