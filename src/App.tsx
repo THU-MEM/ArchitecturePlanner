@@ -6,6 +6,7 @@ import { addPerson, assignOwners, assignComponentOwners, layers, MAX_PLAN_BYTES,
 import type { Component, Module, Plan } from './plan.ts'
 import Canvas from './Canvas.tsx'
 import CurrentArchitecture, { ImplementationContext } from './CurrentArchitecture.tsx'
+import DrawingWorkspace from './DrawingWorkspace.tsx'
 import Icon, { IconButton } from './Icon.tsx'
 import Avatar, { OwnerAvatars } from './Avatar.tsx'
 import { componentIcons, moduleIcon, uiIcon } from './icons.ts'
@@ -14,9 +15,9 @@ import './App.css'
 
 const storageKey = 'architecture-planner.plan.v1'
 const githubEditUrl = 'https://github.com/THU-MEM/ArchitecturePlanner/edit/main/src/seed-plan.json'
-const tabs = ['业务架构', '技术架构', '分工清单', '技术组件', '团队成员', '原始架构'] as const
+const tabs = ['业务架构', '技术架构', '架构画布', '分工清单', '技术组件', '团队成员', '原始架构'] as const
 type Tab = typeof tabs[number]
-const tabIcons = ['canvas', 'layer', 'list', 'technology', 'users', 'original']
+const tabIcons = ['canvas', 'layer', 'canvas', 'list', 'technology', 'users', 'original']
 const participants: unknown = JSON.parse(import.meta.env.VITE_GITHUB_PARTICIPANTS ?? '[]')
 
 function readDraft() {
@@ -259,15 +260,16 @@ function Planner({ published }: { published: Plan }) {
       setBusy(false)
     }
   }
-  return <div className={`app-shell ${tab === '业务架构' || tab === '技术架构' ? 'canvas-page' : ''}`}>
+  return <div className={`app-shell ${tab === '业务架构' || tab === '技术架构' || tab === '架构画布' ? 'canvas-page' : ''}`}>
     <a className="skip" href="#workspace">跳到规划工作区</a>
     <header className="app-header">
       <div className="wordmark" title={plan.name}><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 4h9v9H4zm15 0h9v9h-9zM4 19h9v9H4zm15 0h9v9h-9z" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M13 8h6M8 13v6m16-6v6m-11 5h6" fill="none" stroke="currentColor" strokeWidth="2" /></svg><span>ArchitecturePlanner</span><h1>架构规划台</h1></div>
-      <div className="banner-context"><h2 id="view-title">{tab}{tab === '技术架构' && <span> · Kubernetes · 服务与数据</span>}</h2>{tab !== '技术架构' && <span className="view-count">{tab === '团队成员' ? plan.people.length : tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>
+      <div className="banner-context"><h2 id="view-title">{tab}{tab === '技术架构' && <span> · Kubernetes · 服务与数据</span>}</h2>{tab !== '技术架构' && tab !== '架构画布' && <span className="view-count">{tab === '团队成员' ? plan.people.length : tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>
       <div className="progress-label"><span>已分配</span><strong>{assigned}/{plan.modules.length + plan.components.length}</strong>{dirty && <span className="draft-indicator">未提交</span>}</div>
       <div className="header-actions">
-        <IconButton icon="upload" label="导入规划" onClick={() => fileRef.current?.click()} /><IconButton icon="download" label="导出规划" onClick={exportPlan} />
+        {tab !== '架构画布' && <><IconButton icon="upload" label="导入规划" onClick={() => fileRef.current?.click()} /><IconButton icon="download" label="导出规划" onClick={exportPlan} />
         <IconButton icon="submit" label="提交到 GitHub" className="primary" disabled={busy} onClick={() => setSubmissionOpen(!submissionOpen)} aria-expanded={submissionOpen} />
+        </>}
         <a className="icon-button" href="https://github.com/THU-MEM/ArchitecturePlanner" target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><Icon icon={uiIcon('github')} decorative /></a>
       </div>
       <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={event => {
@@ -276,13 +278,13 @@ function Planner({ published }: { published: Plan }) {
         event.target.value = ''
       }} />
     </header>
-    {submissionOpen && <section className="submission-panel" aria-label="提交规划到 GitHub">
+    {submissionOpen && tab !== '架构画布' && <section className="submission-panel" aria-label="提交规划到 GitHub">
       <div className="submission-identity"><Icon icon={uiIcon('github')} /><div><h2>提交到 GitHub</h2><p>复制 JSON → 全选粘贴 → Commit / PR</p></div></div>
       <div className="actions"><button type="button" className="primary" disabled={busy || !dirty} onClick={() => void copyAndEdit()}><Icon icon={uiIcon('submit')} decorative />{busy ? '正在复制…' : '复制并前往 GitHub'}</button></div>
       <p className="submission-help">在 GitHub 登录后替换文件内容，直接 Commit 或新建分支提 PR；进入主分支后自动发布。规划及分工会进入公开仓库。</p>
       {copyFailed && <div className="copy-fallback"><label htmlFor="copy-plan">手动复制 JSON</label><textarea id="copy-plan" readOnly rows={6} value={`${JSON.stringify(plan, null, 2)}\n`} onFocus={event => event.currentTarget.select()} /><a href={githubEditUrl} rel="noreferrer">前往 GitHub 编辑</a></div>}
     </section>}
-    {savedDraft && <section className="draft-panel" aria-label="本地草稿提示"><p>有一份本地草稿，当前展示已发布规划。</p><button onClick={() => apply(savedDraft)}>恢复本地草稿</button><button type="button" onClick={discardSavedDraft} title="删除此浏览器保存的草稿，刷新后不再提示">删除本地草稿</button></section>}
+    {savedDraft && tab !== '架构画布' && <section className="draft-panel" aria-label="本地草稿提示"><p>有一份本地草稿，当前展示已发布规划。</p><button onClick={() => apply(savedDraft)}>恢复本地草稿</button><button type="button" onClick={discardSavedDraft} title="删除此浏览器保存的草稿，刷新后不再提示">删除本地草稿</button></section>}
     {error && <div className="message error" role="alert"><div>{error}</div><button aria-label="关闭错误提示" onClick={() => setError('')}>关闭</button></div>}
     {pendingImport && <section className="replace-panel"><p>将替换当前草稿。尚未导出的修改可能丢失，请先备份。</p><button onClick={exportPlan}>先导出当前规划</button><button className="primary" onClick={() => {
       apply(pendingImport)
@@ -291,13 +293,14 @@ function Planner({ published }: { published: Plan }) {
       setNotice('规划已替换并保存为本地草稿。')
     }}>确认替换草稿</button><button onClick={() => setPendingImport(null)}>保留当前草稿</button></section>}
     <nav className="view-tabs" aria-label="规划视图">{tabs.map((item, index) => <button type="button" key={item} aria-current={tab === item ? 'page' : undefined} onClick={() => setTab(item)}><Icon icon={uiIcon(tabIcons[index])} decorative />{item}</button>)}</nav>
-    {tab !== '技术架构' && <section className="filter-section" aria-label="筛选"><label>搜索模块<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索" /></label>
+    {tab !== '技术架构' && tab !== '架构画布' && <section className="filter-section" aria-label="筛选"><label>搜索模块<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索" /></label>
           <label>架构层<select value={layer} onChange={event => setLayer(event.target.value)}><option value="">全部架构层</option>{[...new Set(plan.modules.map(module => module.layer))].map(id => <option value={id} key={id}>{layers[id] ?? id}</option>)}</select></label>
           <label>Owner 筛选<select value={ownerFilter} onChange={event => setOwnerFilter(event.target.value)}><option value="">全部成员</option><option value="unassigned">尚未分配</option>{plan.people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
     </section>}
-    <div className={`workspace-shell ${tab === '技术架构' ? 'current-shell' : ''}`}>
+    <div className={`workspace-shell ${tab === '技术架构' || tab === '架构画布' ? 'current-shell' : ''}`}>
       <main id="workspace" aria-labelledby="view-title" className={`workspace ${tab === '原始架构' ? 'original' : ''}`}>
         {tab === '技术架构' && <CurrentArchitecture plan={plan} onComponent={id => { setSelectedComponent(id); setTab('技术组件'); setQuery(''); setOwnerFilter('') }} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} />}
+        {tab === '架构画布' && <DrawingWorkspace />}
         {tab === '业务架构' && <>{visible.length ? <ReactFlowProvider><Canvas plan={plan} visible={visible} selected={selected} onSelect={setSelected} onChange={apply} /></ReactFlowProvider> : <div className="empty">没有匹配的模块</div>}</>}
         {tab === '分工清单' && <div className="table-wrap"><table><caption className="sr-only">模块、主负责人及协作负责人</caption><thead><tr><th>模块与职责</th><th>架构层</th><th>主 owner</th><th>协作 owner</th><th>状态</th></tr></thead><tbody>{visible.map(module => <tr key={module.id} className={selected === module.id ? 'selected-row' : ''}><td><button className="module-link" aria-label={`${module.id} ${module.name}`} onClick={() => setSelected(module.id)}><span className="code">{module.id}</span>{module.name}</button><small>{module.summary}</small></td><td>{layers[module.layer] ?? module.layer}</td>{(['primary', 'secondary'] as const).map(role => <td key={role}><div className="owner-cell"><OwnerAvatars owners={module.owners.filter(owner => owner.role === role)} people={plan.people} /><span>{module.owners.filter(owner => owner.role === role).map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、') || (role === 'primary' ? '未分配' : '—')}</span></div></td>)}<td><span className={`state state-${module.status}`}>{statuses[module.status]}</span></td></tr>)}</tbody></table>{!visible.length && <div className="empty">没有匹配的模块</div>}</div>}
         {tab === '技术组件' && <div className="component-list">{visibleComponents.map(component => <button key={component.id} className={`component-tile ${selectedComponent === component.id ? 'selected-component' : ''}`} aria-label={`${component.id} ${component.name}`} title={component.stack} onClick={() => setSelectedComponent(component.id)}><div className="logo-stack">{componentIcons(component).map(icon => <Icon key={icon.src} icon={icon} />)}</div><strong>{component.name}</strong><div className="tile-owner"><OwnerAvatars owners={component.owners ?? []} people={plan.people} /><span>{component.owners?.filter(owner => owner.role === 'primary').map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、') || '—'}</span></div></button>)}</div>}
@@ -312,7 +315,7 @@ function Planner({ published }: { published: Plan }) {
         </section>}
         {tab === '原始架构' && <><p className="view-hint">只读基线</p><iframe title="AI-MEM 原始架构" src={`${import.meta.env.BASE_URL}architecture.html`} /></>}
       </main>
-      {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && tab !== '技术架构' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} highlightOwners={tab === '业务架构' && visible.some(item => item.id === selected)} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); if (tab !== '业务架构') setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside>}
+      {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && tab !== '技术架构' && tab !== '架构画布' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} highlightOwners={tab === '业务架构' && visible.some(item => item.id === selected)} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); if (tab !== '业务架构') setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside>}
       {tab === '业务架构' && !module && <aside className="inspector"><p className="muted">点击卡片查看模块；再次点击取消选中。</p></aside>}
     </div>
     <footer className="sr-only"><p role="status">{notice}</p></footer>

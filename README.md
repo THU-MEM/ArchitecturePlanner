@@ -1,6 +1,6 @@
 # ArchitecturePlanner
 
-[在线规划台](https://thu-mem.github.io/ArchitecturePlanner/) · [React Flow](https://reactflow.dev/)
+[在线规划台](https://thu-mem.github.io/ArchitecturePlanner/) · [React Flow](https://reactflow.dev/) · [Excalidraw](https://github.com/excalidraw/excalidraw)
 
 基于 AI-MEM 架构的可编辑规划台，支持模块、技术组件、依赖与分工。模块和组件各支持一位主 owner、多位协作 owner。Owner 仅是规划信息，不授予账号或权限。
 
@@ -15,6 +15,19 @@
 
 **规划与分工会进入公开仓库，导出文件也包含人员信息。只填写获授权公开的昵称与规划内容，不要加入凭据、邮箱或其他个人信息。**
 
+## 架构画布
+
+顶部第三个 Tab「架构画布」是独立的自由绘图工作区，不改变业务架构、技术快照或分工 JSON。
+
+- 使用内置工具绘制矩形、椭圆、箭头、线条、文字和自由画笔，支持移动、缩放、绑定箭头、撤销与重做。默认使用清晰的直线样式，也可调整笔画风格。
+- 打开「技术 Logo」，搜索并点击或拖入现有 SVG 素材。Logo 保留原色与宽高比，可移动、缩放，并与框图组合；手机使用点击插入。
+- 「导出 PNG」导出全部图形（不只是当前视口），保留画布背景与 Logo，最长边不超过 4096 像素。空画布不可导出。
+- 「下载画布文件」保存可继续编辑的 `.excalidraw` 文件；「导入画布文件」可恢复，已有内容时必须确认替换。导入上限 20 MiB。
+
+内容仅在当前浏览器自动保存，使用独立键 `architecture-planner.drawing.v1`，**不随规划提交、不自动上传，也不跨设备同步**。清理浏览器数据会丢失草稿，请下载文件备份。存储失败会明确提示，仍可编辑并下载备份；损坏草稿不会被静默覆盖，支持先下载原始内容再明确舍弃。画布按需加载，字体和技术 Logo 从本站提供，不接入协作服务器或 AI 服务。
+
+选型先比较许可与功能：采用 [Excalidraw React 组件](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/integration)（MIT，支持 React 19），复用成熟的自由绘图、图片与 [PNG 导出 API](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/utils/export)。React Flow（MIT）继续承担现有节点拓扑，不重复开发自由画笔；[tldraw 当前 SDK](https://tldraw.dev/community/license) 的生产使用需要许可证密钥，未选用。
+
 ## 数据与边界
 
 [规划 JSON](src/seed-plan.json) 是正式数据源，分工与账号映射由维护者人工核对更新。账号映射仍待确认；空白认领保持未分配，不推断协作或组件负责人。
@@ -26,7 +39,7 @@
 再次点击已选卡片或点击画布空白处可取消选中，恢复全部卡片与连线的正常显示；键盘聚焦卡片后用 Enter / 空格切换选中，Esc 取消选中。未选中时不限制为当前模块连线。
 团队成员列表中，已确认的 GitHub 昵称可点击并在新标签页打开主页；手动添加的普通姓名不推断账号。
 
-顶部紧凑 banner 合并 ArchitecturePlanner、当前视图与已分配数量；技术架构的「Kubernetes · 服务与数据」也在同一标题行。其下用一行文字 Tab 依次切换「业务架构」「技术架构」「分工清单」「技术组件」「团队成员」「原始架构」，窄屏横向滚动，不再保留左侧导航占位或常驻发布／删除状态。筛选改为紧凑横向工具栏，画布铺至浏览器底部，详情独立滚动；窄屏详情位于画布下方。规划名称可在 banner 悬停查看，未提交编辑保留提示，草稿恢复、删除和错误处理不受影响。
+顶部紧凑 banner 合并 ArchitecturePlanner、当前视图与已分配数量；技术架构的「Kubernetes · 服务与数据」也在同一标题行。其下用一行文字 Tab 依次切换「业务架构」「技术架构」「架构画布」「分工清单」「技术组件」「团队成员」「原始架构」，窄屏横向滚动，不再保留左侧导航占位或常驻发布／删除状态。筛选改为紧凑横向工具栏，画布铺至浏览器底部，详情独立滚动；窄屏详情位于画布下方。规划名称可在 banner 悬停查看，未提交编辑保留提示，草稿恢复、删除和错误处理不受影响。
 
 业务架构选中模块时，右侧当前 owner、直接上游 owner、直接下游 owner 同步显示青色、深蓝色、淡黄色提示；兼具关系的人员保留全部标签，其余人员淡化。高亮不勾选协作 owner、不修改分工；依赖按钮同时展示对应模块的 owner，可留在业务画布继续追踪。
 
@@ -56,4 +69,4 @@ npm run test:browser
 
 ## 来源与许可
 
-原始架构经授权发布，技术选型仍为候选规划。工具代码采用 MIT 许可；依赖及图标适用各自许可，见[图标声明](public/THIRD-PARTY-NOTICES.txt)。Logo 不代表已部署或品牌背书。
+原始架构经授权发布，技术选型仍为候选规划。工具代码采用 MIT 许可；依赖及图标适用各自许可，见[第三方声明](public/THIRD-PARTY-NOTICES.txt)。Excalidraw 采用 MIT，字体随原依赖包发布并保留上游来源；Logo 不代表已部署或品牌背书。

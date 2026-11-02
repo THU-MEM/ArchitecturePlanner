@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
     "@dicebear/core": "^9.4.2",
     "@dicebear/initials": "^9.4.2",
     "@xyflow/react": "^12.10.0",
