@@ -704,6 +704,35 @@
         "x": 290,
         "y": 1100
       }
+    },
+    {
+      "id": "M25",
+      "name": "aimem Harness 运行引擎",
+      "summary": "通用 Agent loop + 工具/技能装配 + 会话日志，服务端与浏览器共用。",
+      "detail": "面向各子系统提供统一 Agent 运行能力：core.runTurn 负责记忆注入、流式输出、工具调用、重试/插话与 turn 落盘；同一套 loop 可在 Node 服务端或浏览器 Worker 运行。接入方可经可嵌入 SDK、MCP 或 OpenAI 兼容网关复用，无需自建会话与工具管线；页面还可注册专属工具、技能与子代理。会话事件日志是唯一事实源，SSO 主体按 sso:<sub> 隔离，记忆由 contextDB 统一装配与回写。",
+      "layer": "platform",
+      "components": [
+        "client-loop",
+        "context-store",
+        "client-tools",
+        "model-gateway",
+        "tool-broker",
+        "session-service",
+        "memory-service",
+        "workspace",
+        "backend-api"
+      ],
+      "owners": [
+        {
+          "personId": "github-34643104",
+          "role": "primary"
+        }
+      ],
+      "status": "active",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
     }
   ],
   "components": [
@@ -1453,6 +1482,26 @@
       "id": "dependency-M20-M10",
       "source": "M20",
       "target": "M10"
+    },
+    {
+      "id": "dependency-M16-M25",
+      "source": "M16",
+      "target": "M25"
+    },
+    {
+      "id": "dependency-M17-M25",
+      "source": "M17",
+      "target": "M25"
+    },
+    {
+      "id": "dependency-M25-M06",
+      "source": "M25",
+      "target": "M06"
+    },
+    {
+      "id": "dependency-M25-M11",
+      "source": "M25",
+      "target": "M11"
     }
   ]
 }
