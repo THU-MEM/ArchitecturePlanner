@@ -46,6 +46,27 @@ test('configured GitHub participants are immediately available and can own modul
   await page.screenshot({ path: '.impeccable/review/team-mobile.png', fullPage: true, animations: 'disabled' })
 })
 
+test('team member names open confirmed GitHub profiles without turning manual names into guessed accounts', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: '团队成员', exact: true }).click()
+  const profile = page.locator('.team-list').getByRole('link', { name: 'example-owner', exact: true })
+  await expect(profile).toHaveAttribute('href', 'https://github.com/example-owner')
+  await expect(profile).toHaveAttribute('target', '_blank')
+  await expect(profile).toHaveAttribute('rel', 'noreferrer')
+  await page.context().route('https://github.com/example-owner', route => route.fulfill({ contentType: 'text/html', body: '<title>GitHub profile</title>' }))
+  const popupOpened = page.waitForEvent('popup')
+  await profile.click()
+  const popup = await popupOpened
+  await expect(popup).toHaveURL('https://github.com/example-owner')
+  await popup.close()
+  await page.getByLabel('成员姓名').fill('Alice')
+  await page.getByRole('button', { name: '添加成员', exact: true }).click()
+  await expect(page.locator('.team-list li').filter({ hasText: 'Alice' }).getByRole('link')).toHaveCount(0)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(profile).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+})
+
 test('local initials avatars identify participants and follow applied module and component ownership', async ({ page }) => {
   const externalImages: string[] = []
   page.on('request', request => {
@@ -266,6 +287,16 @@ test('published topology automatically unfolds all dependencies without creating
   await page.goto('./')
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   await expect(page.locator('.react-flow__edge')).toHaveCount(publishedPlan.relationships.length)
+  await expect(page.locator('.planner-node > .node-meta > strong')).toHaveCount(publishedPlan.modules.length)
+  await expect(page.locator('.planner-node > strong')).toHaveCount(0)
+  await expect(page.locator('.planner-node > .node-footer')).toHaveCount(publishedPlan.modules.length)
+  await expect(page.locator('.react-flow__node[data-id="M01"] .node-meta')).toHaveAttribute('title', new RegExp(publishedPlan.modules.find(module => module.id === 'M01')!.name))
+  const layerLegend = page.getByRole('group', { name: '架构层颜色图例', exact: true })
+  await expect(layerLegend.locator('.layer-key')).toHaveCount(5)
+  expect(await layerLegend.evaluate(element => {
+    const row = element.closest('.canvas-toolbar-row')!
+    return row.contains(document.querySelector('input[type="checkbox"]')) && element.getBoundingClientRect().right <= row.getBoundingClientRect().right
+  })).toBeTruthy()
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect.poll(() => page.locator('.react-flow__node').evaluateAll(elements => elements.every(element => {
     const node = element.getBoundingClientRect()
@@ -414,7 +445,8 @@ test('dense dependency plans show all edges by default, color directions and sup
   await expect(page.locator('.react-flow__edge')).toHaveCount(15)
   await expect(page.getByLabel('显示的依赖数', { exact: true })).toHaveText('15/15')
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
-  const focusOnly = page.getByRole('checkbox', { name: '仅看当前模块', exact: true })
+  const allEdges = page.getByRole('checkbox', { name: '全部连线', exact: true })
+  await expect(allEdges).toBeChecked()
   expect(await page.evaluate(() => {
     const toolbar = document.querySelector('.canvas-toolbar')!.getBoundingClientRect()
     return [...document.querySelectorAll('.planner-node')].every(node => {
@@ -422,7 +454,7 @@ test('dense dependency plans show all edges by default, color directions and sup
       return box.right <= toolbar.left || box.left >= toolbar.right || box.bottom <= toolbar.top || box.top >= toolbar.bottom
     })
   })).toBe(true)
-  await focusOnly.check()
+  await allEdges.uncheck()
   await expect(page.locator('.react-flow__edge')).toHaveCount(1)
   await page.locator('.react-flow__node[data-id="M02"]').click()
   await expect(page.locator('.react-flow__edge')).toHaveCount(2)
@@ -431,7 +463,7 @@ test('dense dependency plans show all edges by default, color directions and sup
   const downstream = page.locator('.dependency-downstream .react-flow__edge-path')
   await expect(upstream).toHaveCSS('stroke', 'rgb(33, 103, 173)')
   await expect(downstream).toHaveCSS('stroke', 'rgb(163, 77, 18)')
-  await focusOnly.uncheck()
+  await allEdges.check()
   await expect(page.locator('.react-flow__edge')).toHaveCount(15)
   await page.getByRole('button', { name: '重新布局', exact: true }).click()
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()

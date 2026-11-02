@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Background, BaseEdge, Controls, getSmoothStepPath, Handle, MarkerType, Position, ReactFlow, useNodesInitialized, useReactFlow } from '@xyflow/react'
 import type { Edge, EdgeProps, Node, NodeProps } from '@xyflow/react'
-import { addRelationship, statuses } from './plan.ts'
+import { addRelationship, layers, statuses } from './plan.ts'
 import type { Module, Person, Plan } from './plan.ts'
 import { layoutGraph } from './graph-layout.ts'
 import type { GraphLayout, NodeSize } from './graph-layout.ts'
@@ -15,8 +15,7 @@ type PlannerNode = Node<{ module: Module; people: Person[]; logos: IconReference
 function ModuleNode({ data }: NodeProps<PlannerNode>) {
   return <div className={`planner-node layer-${data.module.layer}`}>
     <Handle type="target" position={Position.Left} />
-    <div className="node-meta"><Icon icon={moduleIcon(data.module.id)} decorative /><span className="code">{data.module.id}</span><span className={`node-state status-${data.module.status}`} title={statuses[data.module.status]} aria-label={statuses[data.module.status]} /></div>
-    <strong>{data.module.name}</strong>
+    <div className="node-meta" title={`${layers[data.module.layer] ?? data.module.layer} · ${data.module.name}`}><Icon icon={moduleIcon(data.module.id)} decorative /><span className="code">{data.module.id}</span><strong>{data.module.name}</strong><span className={`node-state status-${data.module.status}`} title={statuses[data.module.status]} aria-label={statuses[data.module.status]} /></div>
     <div className="node-footer"><div className="logo-stack">{data.logos.map(icon => <Icon key={icon.src} icon={icon} />)}</div>{data.module.owners.length ? <OwnerAvatars owners={data.module.owners} people={data.people} /> : <span className="node-owner" title="未分配"><Icon icon={uiIcon('person')} decorative /></span>}</div>
     <Handle type="source" position={Position.Right} />
   </div>
@@ -103,11 +102,16 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
     })
   return <div className="canvas">
     <div className="canvas-toolbar" aria-label="拓扑布局工具">
-      <button type="button" onClick={() => setLayoutAttempt(value => value + 1)} disabled={layoutPending}>重新布局</button>
-      <label className="check"><input type="checkbox" checked={focusOnly} onChange={event => setFocusOnly(event.target.checked)} />仅看当前模块</label>
-      <div className="edge-legend" aria-label="相对选中模块的连线方向"><span className="legend-upstream">上游 → 当前</span><span className="legend-downstream">当前 → 下游</span><span>其他依赖</span></div>
-      <output aria-label="显示的依赖数">{edges.length}/{availableEdges.length}</output>
-      {layoutPending && <span role="status">正在自动布局…</span>}
+      <div className="canvas-toolbar-row">
+        <button type="button" onClick={() => setLayoutAttempt(value => value + 1)} disabled={layoutPending}>重新布局</button>
+        <label className="check"><input type="checkbox" checked={!focusOnly} onChange={event => setFocusOnly(!event.target.checked)} />全部连线</label>
+        <output aria-label="显示的依赖数">{edges.length}/{availableEdges.length}</output>
+        <div className="canvas-layer-legend" role="group" aria-label="架构层颜色图例">{Object.entries(layers).map(([id, name]) => <span className={`layer-key layer-${id}`} key={id}>{name}</span>)}</div>
+      </div>
+      <div className="canvas-toolbar-row">
+        <div className="edge-legend" aria-label="相对选中模块的连线方向"><span className="legend-upstream">上游 → 当前</span><span className="legend-downstream">当前 → 下游</span><span>其他依赖</span></div>
+        {layoutPending && <span role="status">正在自动布局…</span>}
+      </div>
     </div>
     {layoutError && <p className="error" role="alert">{layoutError}</p>}
     <ReactFlow<PlannerNode, DependencyEdge>

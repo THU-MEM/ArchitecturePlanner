@@ -9,7 +9,7 @@ import CurrentArchitecture, { ImplementationContext } from './CurrentArchitectur
 import Icon, { IconButton } from './Icon.tsx'
 import Avatar, { OwnerAvatars } from './Avatar.tsx'
 import { componentIcons, moduleIcon, uiIcon } from './icons.ts'
-import { mergeGitHubParticipants } from './participants.ts'
+import { githubProfileUrl, mergeGitHubParticipants } from './participants.ts'
 import './App.css'
 
 const storageKey = 'architecture-planner.plan.v1'
@@ -292,7 +292,10 @@ function Planner({ published }: { published: Plan }) {
           event.preventDefault()
           try { apply(addPerson(plan, personName)); setPersonName('') } catch (error) { setError(error instanceof Error ? error.message : String(error)) }
         }}><label>成员姓名<input value={personName} onChange={event => setPersonName(event.target.value)} maxLength={80} required /></label><button className="primary" type="submit">添加成员</button></form>
-          {plan.people.length ? <ul className="team-list">{plan.people.map(person => <li key={person.id}><Avatar person={person} /><strong>{person.name}</strong><span>{plan.modules.filter(module => module.owners.some(owner => owner.personId === person.id)).length + plan.components.filter(component => component.owners?.some(owner => owner.personId === person.id)).length}</span></li>)}</ul> : <div className="empty"><Icon icon={uiIcon('users')} />添加成员</div>}
+          {plan.people.length ? <ul className="team-list">{plan.people.map(person => {
+            const profileUrl = githubProfileUrl(person, participants)
+            return <li key={person.id}><Avatar person={person} /><strong>{profileUrl ? <a href={profileUrl} target="_blank" rel="noreferrer" title="在新标签页打开 GitHub 主页">{person.name}</a> : person.name}</strong><span>{plan.modules.filter(module => module.owners.some(owner => owner.personId === person.id)).length + plan.components.filter(component => component.owners?.some(owner => owner.personId === person.id)).length}</span></li>
+          })}</ul> : <div className="empty"><Icon icon={uiIcon('users')} />添加成员</div>}
         </section>}
         {tab === '原始架构' && <><p className="view-hint">只读基线</p><iframe title="AI-MEM 原始架构" src={`${import.meta.env.BASE_URL}architecture.html`} /></>}
       </main>

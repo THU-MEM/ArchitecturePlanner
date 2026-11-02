@@ -2,7 +2,18 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import seed from './fixture.ts'
 import { assignOwners, validatePlan } from '../src/plan.ts'
-import { mergeGitHubParticipants } from '../src/participants.ts'
+import { githubProfileUrl, mergeGitHubParticipants } from '../src/participants.ts'
+
+test('profile links use confirmed GitHub identities without guessing a manually entered name', () => {
+  assert.equal(githubProfileUrl({ id: 'github-101', name: 'Example-Owner' }), 'https://github.com/Example-Owner')
+  assert.equal(githubProfileUrl({ id: 'local-owner', name: 'Example-Owner' }, [{ id: 101, login: 'example-owner' }]), 'https://github.com/Example-Owner')
+  for (const person of [
+    { id: 'manual', name: 'Alice' },
+    { id: 'manual', name: '张三' },
+    { id: 'github-101', name: '../settings' },
+    { id: 'github-101', name: 'a'.repeat(40) },
+  ]) assert.equal(githubProfileUrl(person), null)
+})
 
 test('configured participants have stable GitHub IDs, are assignable and merge idempotently', () => {
   const plan = validatePlan(seed)

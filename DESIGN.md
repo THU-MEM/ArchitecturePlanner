@@ -45,6 +45,8 @@ Compact rounded controls and nodes, without decorative panels.
 ## Components
 Icon-only actions have accessible names and tooltips. Native owner controls retain names. Details and the component palette expand only when requested. Published/draft status, GitHub handoff instructions, errors and replacement warnings remain explicit.
 Local initials avatars identify participants across views; owner tooltips include names and roles, and primary owners have an outline.
+Canvas module cards have two content rows: icon, ID, name and state share the tinted heading; technology logos and owner avatars share the footer. Long headings truncate visually with the full name and layer available on hover and the node's accessible name retaining the full module name. Heading tints indicate architecture layer, not completion status.
+The architecture-layer color legend sits at the upper right of the canvas toolbar, on the same desktop row as the all-dependencies toggle. A separate line-direction key below distinguishes edge colors from card tints. Both reflow on narrow screens without covering graph content.
 
 ## Do's and Don'ts
 Do preserve original SVG colors and keyboard focus. Do keep assignments visibly actionable. Don't replace meaningful names with ambiguous logos or imply that local data is shared.
