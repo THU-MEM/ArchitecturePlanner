@@ -2,10 +2,11 @@ import { useMemo } from 'react'
 import { createAvatar } from '@dicebear/core'
 import * as initials from '@dicebear/initials'
 import type { Owner, Person } from './plan.ts'
+import { avatarSeed } from './avatar-initials.ts'
 
 export default function Avatar({ person, role }: { person: Person; role?: Owner['role'] }) {
   const source = useMemo(() => createAvatar(initials, {
-    seed: person.name,
+    seed: avatarSeed(person.name),
     backgroundColor: ['176976', '345c88', '634b8c', '286452', '765921', '9c4635'],
     textColor: ['ffffff'],
     fontWeight: 600,
