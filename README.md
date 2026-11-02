@@ -28,7 +28,7 @@
 
 左上角依次为「业务架构」「技术架构」「分工清单」「技术组件」「团队成员」「原始架构」。业务架构选中模块时，右侧当前 owner、直接上游 owner、直接下游 owner 同步显示青色、深蓝色、淡黄色提示；兼具关系的人员保留全部标签，其余人员淡化。高亮不勾选协作 owner、不修改分工；依赖按钮同时展示对应模块的 owner，可留在业务画布继续追踪。
 
-「技术架构」复用原项目现状页面、React Flow 与共享 ELK 布局／连线，覆盖 Kubernetes 基础设施、入口、身份、服务、存储和独立业务。支持全部组件／运行现场／源码与待接入筛选、缩放、适应全图与双向关系导航；此图只读，不写入业务规划 JSON。
+「技术架构」复用原项目现状页面、React Flow 与共享 ELK 布局／连线，覆盖 Kubernetes 基础设施、入口、身份、服务、存储和独立业务。默认展示运行现场，可切换全部组件／源码与待接入，支持缩放、适应全图与双向关系导航；此图只读，不写入业务规划 JSON。
 
 技术事实依据 AI-MEM 的 `server/deploy`、`server/services` 与 **2026-11-02 18:40 UTC+08:00 的实际 SSH 只读核对**。现场为单节点 Kubernetes，19 个 Pod 中 18 Running、1 Pending；APISIX、网络/DNS、证书控制器、持久卷、Keycloak 与 PostgreSQL 已就绪。MEM-AI 因 `ErrImageNeverPull` 未启动，Service 无就绪端点，当前配置 SQLite 与独立 PVC；模板中的 MySQL／Redis 不能画成线上依赖。hub-api、事件服务、Redis、MinIO、ClickHouse、MCP、案例应用与 LLMWiki 本次集群未见，不推断其他主机的状态。实线表示现场资源／配置关系，虚线表示源码／模板，点线表示待接入，**均不等于端到端业务验收**。
 

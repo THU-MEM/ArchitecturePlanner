@@ -18,7 +18,9 @@ function ProjectNodeCard({ data }: NodeProps<ProjectNode>) {
   const { fact, selected, onSelect } = data
   return <>
     <button className={`project-node nodrag nopan runtime-${fact.runtime} ${selected ? 'selected-project' : ''}`}
-      aria-label={`查看现状 ${fact.name}`} aria-pressed={selected} title={`${fact.name} · ${runtimeStates[fact.runtime]} · ${fact.stack}`} onClick={() => onSelect(fact.id)}>
+      aria-label={`查看现状 ${fact.name}`} aria-pressed={selected} title={`${fact.name} · ${runtimeStates[fact.runtime]} · ${fact.stack}`} onClick={() => onSelect(fact.id)} onKeyDown={event => {
+        if (event.key === 'Escape') { event.preventDefault(); onSelect('') }
+      }}>
       <span className="project-node-heading"><span>{fact.project}</span><span className={`runtime-state runtime-${fact.runtime}`}>{runtimeStates[fact.runtime]}</span></span>
       <strong>{fact.name}</strong>
       <span className="project-node-stack"><Icon icon={componentIcons({ id: fact.components[0], name: fact.name, detail: fact.detail, stack: fact.stack })[0]} decorative /><span>{fact.stack}</span></span>
@@ -45,7 +47,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   plan: Plan; onComponent: (id: string) => void; onModule: (id: string) => void
 }) {
   const [selected, setSelected] = useState('')
-  const [scope, setScope] = useState('all')
+  const [scope, setScope] = useState('runtime')
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<{ key: string; layout: GraphLayout | null; error: string } | null>(null)
   const [fittedKey, setFittedKey] = useState('')
