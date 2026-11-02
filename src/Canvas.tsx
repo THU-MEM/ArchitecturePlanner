@@ -39,38 +39,40 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
   const [focusOnly, setFocusOnly] = useState(false)
   const [sizes, setSizes] = useState<Record<string, NodeSize>>({})
-  const [layout, setLayout] = useState<GraphLayout | null>(null)
-  const [layoutError, setLayoutError] = useState('')
-  const [layoutPending, setLayoutPending] = useState(true)
+  const [layoutState, setLayoutState] = useState<{ key: string; value: GraphLayout | null; error: string } | null>(null)
   const [layoutAttempt, setLayoutAttempt] = useState(0)
   const initialized = useNodesInitialized()
   const { fitView } = useReactFlow<PlannerNode>()
-  const visibleIds = visible.map(module => module.id).join(',')
   const availableEdges = useMemo(() => plan.relationships.filter(edge => visible.some(module => module.id === edge.source) && visible.some(module => module.id === edge.target)), [plan.relationships, visible])
   const layoutInput = JSON.stringify({ modules: visible.map(({ id }) => ({ id })), relationships: availableEdges, sizes })
+  const layoutKey = `${layoutAttempt}:${layoutInput}`
+  const layout = layoutState?.value
+  const layoutPending = layoutState?.key !== layoutKey
+  const layoutError = layoutPending ? '' : layoutState?.error
+  const completedLayoutKey = layoutState?.key
   useEffect(() => {
     if (!initialized) return
     let cancelled = false
-    setLayoutPending(true)
-    setLayoutError('')
     const input: { modules: Pick<Module, 'id'>[]; relationships: Plan['relationships']; sizes: Record<string, NodeSize> } = JSON.parse(layoutInput)
     void layoutGraph(input.modules, input.relationships, input.sizes).then(result => {
-      if (!cancelled) { setLayout(result); setLayoutPending(false) }
+      if (!cancelled) setLayoutState({ key: layoutKey, value: result, error: '' })
     }).catch((error: unknown) => {
       if (!cancelled) {
-        setLayoutError(`自动布局失败：${error instanceof Error ? error.message : String(error)}。可重试或手动拖动模块。`)
-        setLayoutPending(false)
+        setLayoutState(previous => ({
+          key: layoutKey, value: previous?.value ?? null,
+          error: `自动布局失败：${error instanceof Error ? error.message : String(error)}。可重试或手动拖动模块。`,
+        }))
       }
     })
     return () => { cancelled = true }
-  }, [initialized, layoutInput, layoutAttempt])
+  }, [initialized, layoutInput, layoutKey])
   useEffect(() => {
-    if (!layout || layoutPending) return
+    if (!completedLayoutKey || layoutPending) return
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => { void fitView({ padding: 0.12, maxZoom: 0.85, minZoom: 0.04 }) })
     })
     return () => cancelAnimationFrame(frame)
-  }, [layoutAttempt, layoutPending, fitView, visibleIds])
+  }, [completedLayoutKey, layoutPending, fitView])
   const nodes = useMemo<PlannerNode[]>(() => visible.map(module => ({
     id: module.id, type: 'module', position: layout?.positions[module.id] ?? module.position, selected: selected === module.id, deletable: false, measured: sizes[module.id],
     data: {
@@ -115,10 +117,13 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
       }}
       onNodeClick={(_, node) => onSelect(node.id)}
       onNodeDrag={(_, node) => {
-        setLayout(current => current && ({
-          positions: { ...current.positions, [node.id]: node.position },
-          routes: Object.fromEntries(Object.entries(current.routes).filter(([id]) => !availableEdges.some(edge => edge.id === id && (edge.source === node.id || edge.target === node.id)))),
-        }))
+        setLayoutState(current => current?.value ? ({
+          ...current,
+          value: {
+            positions: { ...current.value.positions, [node.id]: node.position },
+            routes: Object.fromEntries(Object.entries(current.value.routes).filter(([id]) => !availableEdges.some(edge => edge.id === id && (edge.source === node.id || edge.target === node.id)))),
+          },
+        }) : current)
         onChange({
           ...plan,
           modules: plan.modules.map(module => ({ ...module, position: module.id === node.id ? node.position : layout?.positions[module.id] ?? module.position })),

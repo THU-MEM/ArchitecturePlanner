@@ -1,4 +1,5 @@
 import type { Module, Position, Relationship } from './plan.ts'
+import type { ElkNode } from 'elkjs/lib/elk-api.js'
 
 export type NodeSize = { width: number; height: number }
 export type GraphLayout = {
@@ -8,7 +9,7 @@ export type GraphLayout = {
 
 export async function layoutGraph(modules: Pick<Module, 'id'>[], relationships: Relationship[], sizes: Record<string, NodeSize>): Promise<GraphLayout> {
   const { default: ELK } = await import('elkjs/lib/elk.bundled.js')
-  const graph = await new ELK().layout({
+  const input: ElkNode = {
     id: 'architecture',
     layoutOptions: {
       'elk.algorithm': 'layered',
@@ -39,7 +40,8 @@ export async function layoutGraph(modules: Pick<Module, 'id'>[], relationships: 
     edges: relationships.map(edge => ({
       id: edge.id, sources: [`${edge.source}-out`], targets: [`${edge.target}-in`],
     })),
-  })
+  }
+  const graph = await new ELK().layout(input)
   const positions: GraphLayout['positions'] = {}
   const routes: GraphLayout['routes'] = {}
   for (const node of graph.children ?? []) {
