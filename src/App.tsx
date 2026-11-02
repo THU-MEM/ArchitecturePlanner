@@ -242,7 +242,7 @@ function Planner({ published }: { published: Plan }) {
       setBusy(false)
     }
   }
-  return <div className="app-shell">
+  return <div className={`app-shell ${tab === '架构画布' ? 'canvas-page' : ''}`}>
     <a className="skip" href="#workspace">跳到规划工作区</a>
     <header className="app-header">
       <div className="wordmark"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 4h9v9H4zm15 0h9v9h-9zM4 19h9v9H4zm15 0h9v9h-9z" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M13 8h6M8 13v6m16-6v6m-11 5h6" fill="none" stroke="currentColor" strokeWidth="2" /></svg><span>ArchitecturePlanner</span></div>
@@ -280,6 +280,7 @@ function Planner({ published }: { published: Plan }) {
           <label>Owner 筛选<select value={ownerFilter} onChange={event => setOwnerFilter(event.target.value)}><option value="">全部成员</option><option value="unassigned">尚未分配</option>{plan.people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
         </div>}
         <div className="privacy-note"><Icon icon={uiIcon(dirty ? 'lock' : 'github')} decorative /><strong>{dirty ? '本地草稿' : '已发布规划'}</strong></div>
+        {tab === '架构画布' && <footer className="canvas-status"><p role="status">{notice}</p></footer>}
       </aside>
       <main id="workspace" className={`workspace ${tab === '原始架构' ? 'original' : ''}`}>
         <div className="view-heading"><h2>{tab}</h2>{tab !== '项目现状' && <span>{tab === '团队成员' ? plan.people.length : tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>
@@ -297,6 +298,6 @@ function Planner({ published }: { published: Plan }) {
       </main>
       {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && tab !== '项目现状' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside>}
     </div>
-    <footer><p role="status">{notice}</p></footer>
+    {tab !== '架构画布' && <footer><p role="status">{notice}</p></footer>}
   </div>
 }

@@ -240,6 +240,26 @@ test('technology inspection preserves reverse navigation to referencing business
   await expect(page.getByLabel('模块名称')).toHaveValue(seed.modules.find(module => module.id === 'M01')!.name)
 })
 
+test('canvas fills the desktop viewport while the inspector scrolls independently', async ({ page }) => {
+  await page.goto('./')
+  const canvas = page.locator('.canvas')
+  await expect(canvas).toBeVisible()
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1920, height: 1200 }, { width: 1280, height: 720 }]) {
+    await page.setViewportSize(viewport)
+    await expect.poll(() => canvas.evaluate(element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight))).toBeLessThanOrEqual(1)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBeTruthy()
+    await page.getByRole('button', { name: '应用修改', exact: true }).scrollIntoViewIfNeeded()
+    await expect(page.getByRole('button', { name: '应用修改', exact: true })).toBeInViewport()
+    expect(await canvas.evaluate(element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight))).toBeLessThanOrEqual(1)
+  }
+  await page.getByRole('button', { name: '提交到 GitHub', exact: true }).click()
+  await expect(page.getByRole('region', { name: '提交规划到 GitHub' })).toBeVisible()
+  await expect.poll(() => canvas.evaluate(element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight))).toBeLessThanOrEqual(1)
+  await page.getByLabel('搜索模块').fill('no-matching-module')
+  await expect(page.getByText('没有匹配的模块', { exact: true })).toBeVisible()
+  expect(await page.locator('.workspace > .empty').evaluate(element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight))).toBeLessThanOrEqual(1)
+})
+
 test('workspace renders without page errors or viewport overflow at desktop and mobile sizes', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))

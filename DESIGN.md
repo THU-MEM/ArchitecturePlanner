@@ -33,6 +33,7 @@ System UI fonts support Chinese and English. Hierarchy comes from weight and siz
 
 ## Layout
 Desktop uses navigation, workspace and inspector columns. Narrow screens stack the inspector and keep navigation compact. Diagram layouts remain user-editable.
+On the three-column architecture canvas, the drawing area fills the remaining viewport down to the browser bottom; navigation and inspector scroll independently, with planning status in the sidebar.
 Dense graphs focus on the selected module, with all dependencies available on demand. Upstream/downstream navigation and display filtering never modify planning data.
 
 ## Elevation & Depth

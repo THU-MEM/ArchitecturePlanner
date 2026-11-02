@@ -197,6 +197,17 @@ footer span { flex-shrink: 0; }
 .privacy-note .icon { width: 19px; height: 19px; }
 .team-section form { margin-top: 0; }
 .empty .icon { display: block; width: 42px; height: 42px; margin-bottom: 14px; }
+.canvas-status { padding: 16px 0 0; }
+@media(min-width: 1151px) {
+  .canvas-page { height: 100dvh; display: flex; flex-direction: column; }
+  .canvas-page > :not(.workspace-shell) { flex-shrink: 0; }
+  .canvas-page .workspace-shell { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); border-bottom: 0; }
+  .canvas-page .sidebar, .canvas-page .inspector { min-height: 0; overflow-y: auto; }
+  .canvas-page .workspace { min-height: 0; display: flex; flex-direction: column; }
+  .canvas-page .view-heading { flex-shrink: 0; }
+  .canvas-page .canvas { height: auto; flex: 1; min-height: 0; }
+  .canvas-page .workspace > .empty { flex: 1; background: var(--canvas, #f4f8fa); }
+}
 @media(max-width: 1150px) {
   .workspace-shell { grid-template-columns: 180px minmax(0, 1fr); }
   .inspector { grid-column: 2; border-left: 0; border-top: 1px solid var(--line); }
@@ -237,4 +248,5 @@ footer span { flex-shrink: 0; }
   .team-section form label { flex-basis: 100%; }
   footer { padding: 16px; flex-direction: column; gap: 7px; }
   footer span { flex-shrink: 1; }
+  .canvas-status { padding: 16px 0 0; }
 }
