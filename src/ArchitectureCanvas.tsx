@@ -12,6 +12,7 @@ import '@excalidraw/excalidraw/index.css'
 import './ArchitectureCanvas.css'
 
 const logoDragType = 'application/x-architecture-planner-logo'
+type RestoredScene = Awaited<ReturnType<typeof loadFromBlob>>
 const blankScene: ExcalidrawInitialDataState = {
   appState: {
     viewBackgroundColor: '#ffffff', currentItemFontFamily: 2,
@@ -39,7 +40,7 @@ export default function ArchitectureCanvas() {
   const [saveError, setSaveError] = useState('')
   const [busy, setBusy] = useState(false)
   const [elementCount, setElementCount] = useState(0)
-  const [pendingImport, setPendingImport] = useState<ExcalidrawInitialDataState | null>(null)
+  const [pendingImport, setPendingImport] = useState<RestoredScene | null>(null)
   const [savedRaw, setSavedRaw] = useState('')
   const lastSaved = useRef('')
   const stageRef = useRef<HTMLDivElement>(null)
@@ -107,7 +108,7 @@ export default function ArchitectureCanvas() {
     }
   }
 
-  function replaceScene(data: ExcalidrawInitialDataState) {
+  function replaceScene(data: RestoredScene) {
     if (!api) return
     api.resetScene()
     if (data.files) api.addFiles(Object.values(data.files))
