@@ -478,10 +478,18 @@ test('fresh business canvases stay spread out on phone, landscape and desktop wi
   await page.getByRole('button', { name: '重新布局', exact: true }).click()
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   const original = await page.locator('.react-flow__viewport').getAttribute('style')
-  const pane = await page.locator('.react-flow__pane').boundingBox()
-  await page.mouse.move(pane!.x + 15, pane!.y + 15)
+  const start = await page.locator('.react-flow__pane').evaluate(element => {
+    const pane = element.getBoundingClientRect()
+    for (let y = Math.max(0, pane.top) + 20; y < Math.min(window.innerHeight, pane.bottom) - 80; y += 30) {
+      for (let x = pane.left + 20; x < pane.right - 100; x += 30) {
+        if (document.elementFromPoint(x, y) === element) return { x, y }
+      }
+    }
+    throw new Error('No visible blank canvas area available for panning')
+  })
+  await page.mouse.move(start.x, start.y)
   await page.mouse.down()
-  await page.mouse.move(pane!.x + 100, pane!.y + 70, { steps: 8 })
+  await page.mouse.move(start.x + 85, start.y + 55, { steps: 8 })
   await page.mouse.up()
   await expect(page.locator('.react-flow__viewport')).not.toHaveAttribute('style', original!)
   expect((await page.locator('.react-flow__node[data-id="M01"]').boundingBox())!.width).toBeGreaterThanOrEqual(187)
