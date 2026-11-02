@@ -121,6 +121,8 @@ test('discarding the saved draft removes it permanently without replacing the pu
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: '删除本地草稿', exact: true }).click()
   await expect(page.getByRole('region', { name: '本地草稿提示', exact: true })).toHaveCount(0)
+  await expect(page.getByText('已删除本地草稿', { exact: false })).toHaveCount(0)
+  await expect(page.locator('.privacy-note, .canvas-status')).toHaveCount(0)
   await expect(page.getByLabel('模块名称')).toHaveValue(seed.modules.find(module => module.id === 'M01')!.name)
   expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
   expect(await page.evaluate(() => localStorage.getItem('unrelated-setting'))).toBe('keep')

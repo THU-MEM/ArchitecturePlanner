@@ -26,11 +26,15 @@
 再次点击已选卡片或点击画布空白处可取消选中，恢复全部卡片与连线的正常显示；键盘聚焦卡片后用 Enter / 空格切换选中，Esc 取消选中。未选中时不限制为当前模块连线。
 团队成员列表中，已确认的 GitHub 昵称可点击并在新标签页打开主页；手动添加的普通姓名不推断账号。
 
-左上角依次为「业务架构」「技术架构」「分工清单」「技术组件」「团队成员」「原始架构」。业务架构选中模块时，右侧当前 owner、直接上游 owner、直接下游 owner 同步显示青色、深蓝色、淡黄色提示；兼具关系的人员保留全部标签，其余人员淡化。高亮不勾选协作 owner、不修改分工；依赖按钮同时展示对应模块的 owner，可留在业务画布继续追踪。
+顶部紧凑 banner 合并 ArchitecturePlanner、当前视图与已分配数量；技术架构的「Kubernetes · 服务与数据」也在同一标题行。其下用一行文字 Tab 依次切换「业务架构」「技术架构」「分工清单」「技术组件」「团队成员」「原始架构」，窄屏横向滚动，不再保留左侧导航占位或常驻发布／删除状态。筛选改为紧凑横向工具栏，画布铺至浏览器底部，详情独立滚动；窄屏详情位于画布下方。规划名称可在 banner 悬停查看，未提交编辑保留提示，草稿恢复、删除和错误处理不受影响。
+
+业务架构选中模块时，右侧当前 owner、直接上游 owner、直接下游 owner 同步显示青色、深蓝色、淡黄色提示；兼具关系的人员保留全部标签，其余人员淡化。高亮不勾选协作 owner、不修改分工；依赖按钮同时展示对应模块的 owner，可留在业务画布继续追踪。
 
 「技术架构」复用原项目现状页面、React Flow 与共享 ELK 布局／连线，覆盖 Kubernetes 基础设施、入口、身份、服务、存储和独立业务。默认展示运行现场，可切换全部组件／源码与待接入，支持缩放、适应全图与双向关系导航；此图只读，不写入业务规划 JSON。
 
-技术事实依据 AI-MEM 的 `server/deploy`、`server/services` 与 **2026-11-02 18:40 UTC+08:00 的实际 SSH 只读核对**。现场为单节点 Kubernetes，19 个 Pod 中 18 Running、1 Pending；APISIX、网络/DNS、证书控制器、持久卷、Keycloak 与 PostgreSQL 已就绪。该快照中 MEM-AI 因 `ErrImageNeverPull` 未启动，Service 无就绪端点。**项目方已纠正目标方案：MEM-AI 弃用 SQLite，接入 PostgreSQL**；图中用「网关 PostgreSQL」和待迁移连线表示，默认运行视图也显示此迁移目标，不宣称迁移已完成。快照中的 SQLite / 1Gi PVC 仅为待替换的旧配置；MySQL／Redis 旧模板不是 PostgreSQL 目标方案，也不能画成线上依赖。hub-api、事件服务、Redis、MinIO、ClickHouse、MCP、案例应用与 LLMWiki 本次集群未见，不推断其他主机的状态。实线表示现场资源／配置关系，虚线表示源码／模板，点线表示待接入，**均不等于端到端业务验收**。
+技术事实依据 AI-MEM 的 `server/deploy`、`server/services` 与 **2026-11-02 22:08 UTC+08:00 的实际 SSH 只读复核**。现场为单节点 Kubernetes，19 个 Pod 全部 Running 且容器就绪。MEM-AI Deployment 1/1、Service 有 1 个就绪端点，已配置 PostgreSQL，数据库侧可见连接。图中实线展示「模型网关 → 网关 PostgreSQL 逻辑库 → PostgreSQL 共享实例 → postgres-data 20Gi 本地持久卷」；Keycloak 与网关共用实例，但使用不同逻辑库及数据库用户名，未审计 SQL 授权。网关另外保留「/data → mem-ai-data 1Gi 本地卷」，不是 PostgreSQL 主数据目录。三个 PVC（含 etcd 5Gi）均 Bound 至 local-path 节点本地 PV，不代表跨节点高可用或已有备份。
+
+证书管理、服务发现、资源指标和集群网络均为**现场已运行**，不是规划：cert-manager 的 controller、cainjector、webhook 各 1/1；CoreDNS 2/2；metrics-server 1/1 且指标 API Available；Calico node 与 controllers 各 1/1。默认详情直接列出核对证据。当前没有 `Certificate` 资源，不能据此认定业务证书已由 cert-manager 签发。hub-api、事件服务、Redis、MinIO、ClickHouse、MCP、案例应用与 LLMWiki 本次集群未见，不推断其他主机的状态。MySQL／Redis 旧模板不是网关线上依赖。实线表示现场资源／配置关系，虚线表示源码／模板，点线表示待接入，**均不等于模型推理、登录、历史数据迁移或备份恢复的端到端验收**。
 
 快照仅公开脱敏职责与状态，不含服务器地址、私有域名、Secret、环境变量值、人员实名或原始运维输出；不是实时监控，不自动改变规划状态。原始架构仍只读，规划台本身不接入 SSO，也不连接服务器、数据库或 Kubernetes API。
 

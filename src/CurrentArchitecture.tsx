@@ -52,7 +52,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   const [result, setResult] = useState<{ key: string; layout: GraphLayout | null; error: string } | null>(null)
   const [fittedKey, setFittedKey] = useState('')
   const flowRef = useRef<ReactFlowInstance<ProjectNode, DependencyEdge> | null>(null)
-  const facts = technicalFacts.filter(item => scope === 'all' || (scope === 'runtime' ? item.runtime === 'ready' || item.runtime === 'blocked' || item.id === 'mem-postgres' : item.runtime !== 'ready' && item.runtime !== 'blocked'))
+  const facts = technicalFacts.filter(item => scope === 'all' || (scope === 'runtime' ? item.runtime === 'ready' || item.runtime === 'blocked' : item.runtime !== 'ready' && item.runtime !== 'blocked'))
   const flows = technicalFlows.filter(flow => facts.some(item => item.id === flow.source) && facts.some(item => item.id === flow.target))
   const layoutInput = JSON.stringify({ modules: facts.map(({ id }) => ({ id })), relationships: flows.map(({ id, source, target }) => ({ id, source, target })) })
   const layoutKey = `${attempt}:${layoutInput}`
@@ -102,16 +102,16 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
     style: { stroke: color, strokeWidth: 1.6, strokeDasharray: flow.evidence === 'observed' ? undefined : flow.evidence === 'planned' ? '2 5' : '7 5', opacity: fact && flow.source !== selected && flow.target !== selected ? 0.25 : 1 },
     markerEnd: { type: MarkerType.ArrowClosed, color },
   }}) : []
+  function inspect(id: string) {
+    setSelected(id)
+    const node = nodes.find(item => item.id === id)
+    if (node) void flowRef.current?.setCenter(node.position.x + 135, node.position.y + 71, { zoom: 0.9 })
+  }
   return <section className="current-architecture" aria-label="当前项目架构">
-    <div className="current-heading"><h3>Kubernetes · 服务与数据</h3><p>源码已实现 ≠ 生产已上线</p></div>
-    <p className="runtime-summary">SSH 核对：{runtimeSnapshot.inspectedAt} · {runtimeSnapshot.nodes} 节点 / {runtimeSnapshot.pods} Pod · {runtimeSnapshot.running} Running / {runtimeSnapshot.pending} Pending · 只读快照，非实时监控</p>
+    <p className="runtime-summary">SSH 核对：{runtimeSnapshot.inspectedAt} · {runtimeSnapshot.nodes} 节点 / {runtimeSnapshot.pods} Pod · {runtimeSnapshot.running} Running / {runtimeSnapshot.pending} Pending · 只读快照，非实时监控 · <span>源码已实现 ≠ 生产已上线</span></p>
     <div className="technical-toolbar">
-    <label>范围<select aria-label="技术架构范围" value={scope} onChange={event => { setScope(event.target.value); setSelected('') }}><option value="all">全部技术组件</option><option value="runtime">运行现场与迁移目标</option><option value="source">源码与待接入</option></select></label>
-    <label className="current-picker">项目组件<select value={selected} disabled={pending} onChange={event => {
-      const node = nodes.find(item => item.id === event.target.value)
-      setSelected(event.target.value)
-      if (node) void flowRef.current?.setCenter(node.position.x + 135, node.position.y + 71, { zoom: 0.9 })
-    }}><option value="">未选中</option>{facts.map(item => <option key={item.id} value={item.id}>{item.project} · {item.name}</option>)}</select></label>
+    <label>范围<select aria-label="技术架构范围" value={scope} onChange={event => { setScope(event.target.value); setSelected('') }}><option value="all">全部技术组件</option><option value="runtime">现场已部署</option><option value="source">源码与待接入</option></select></label>
+    <label className="current-picker">项目组件<select value={selected} disabled={pending} onChange={event => inspect(event.target.value)}><option value="">未选中</option>{facts.map(item => <option key={item.id} value={item.id}>{item.project} · {item.name}</option>)}</select></label>
     <button type="button" disabled={pending && !result?.error} onClick={() => setAttempt(value => value + 1)}>重新布局</button>
     <button type="button" disabled={pending} onClick={() => void flowRef.current?.fitView({ padding: 0.12, minZoom: 0.04 })}>适应全图</button>
     <span className="technical-edge-legend">实线：现场资源关系 · 虚线：源码 / 模板 · 点线：待接入</span>
@@ -133,11 +133,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
       <div className="technical-dependencies">{(['upstream', 'downstream'] as const).map(direction => <section key={direction}><h4>{direction === 'upstream' ? '上游 → 当前' : '当前 → 下游'}</h4>
         {flows.filter(flow => direction === 'upstream' ? flow.target === selected : flow.source === selected).map(flow => {
           const other = technicalFacts.find(item => item.id === (direction === 'upstream' ? flow.source : flow.target))!
-          return <button type="button" className={`technical-${direction}`} key={flow.id} onClick={() => {
-            setSelected(other.id)
-            const node = nodes.find(item => item.id === other.id)!
-            void flowRef.current?.setCenter(node.position.x + 135, node.position.y + 71, { zoom: 0.9 })
-          }}>{other.name}<small>{flow.label} · {flow.evidence === 'observed' ? '现场资源' : flow.evidence === 'source' ? '源码 / 模板' : '待接入'}</small></button>
+          return <button type="button" className={`technical-${direction}`} key={flow.id} onClick={() => inspect(other.id)}>{other.name}<small>{flow.label} · {flow.evidence === 'observed' ? '现场资源' : flow.evidence === 'source' ? '源码 / 模板' : '待接入'}</small></button>
         })}
         {!flows.some(flow => direction === 'upstream' ? flow.target === selected : flow.source === selected) && <p className="muted">无已记录关系</p>}
       </section>)}</div>
@@ -148,7 +144,17 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
         {fact.sources.map(source => <p key={source.label}>{source.href ? <a href={source.href} target="_blank" rel="noreferrer">{source.label}</a> : source.label}</p>)}
         <p>SSO 与独立业务依据 AI-MEM 源码；MEM-AI 已通过子模块引用。资源就绪不等于业务验收，集群未见不代表其他机器未运行。规划台未接入 SSO；owner 不是登录账号或权限。</p>
       </details>
-      </> : <><h3>技术组件详情</h3><p>点击卡片查看运行状态、来源与连接；再次点击取消选中。</p><div className="runtime-legend">{Object.entries(runtimeStates).map(([state, label]) => <span className={`runtime-state runtime-${state}`} key={state}>{label}</span>)}</div><p>{runtimeSnapshot.method}</p><p>箭头按标注表示调用、承载、配置或存储关系；实线只证明现场资源或配置存在，不保证端到端业务可用。虚线与点线不是线上链路。</p></>}
+      </> : <><h3>技术组件详情</h3><p>点击卡片查看运行状态、来源与连接；再次点击取消选中。</p>
+        {scope !== 'source' && <section className="technical-dependencies" aria-label="基础设施现场证据">
+          <h4>基础设施 · 现场已运行</h4>
+          {['cert-manager', 'coredns', 'metrics', 'calico'].map(id => {
+            const item = technicalFacts.find(value => value.id === id)!
+            return <button type="button" key={id} disabled={pending} aria-label={`核对${item.name}`} onClick={() => inspect(id)}>
+              {item.name} · {item.stack}<small>{item.observation}</small>
+            </button>
+          })}
+        </section>}
+        <div className="runtime-legend">{Object.entries(runtimeStates).map(([state, label]) => <span className={`runtime-state runtime-${state}`} key={state}>{label}</span>)}</div><p>{runtimeSnapshot.method}</p><p>箭头按标注表示调用、承载、配置或存储关系；实线只证明现场资源或配置存在，不保证端到端业务可用。虚线与点线不是线上链路。</p></>}
     </section></div>
   </section>
 }

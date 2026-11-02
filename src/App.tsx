@@ -161,7 +161,7 @@ function Planner({ published }: { published: Plan }) {
   const [selectedComponent, setSelectedComponent] = useState('workspace')
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState(initial.error)
-  const [notice, setNotice] = useState('已发布规划 · 修改后到 GitHub 提交')
+  const [notice, setNotice] = useState('')
   const [personName, setPersonName] = useState('')
   const [submissionOpen, setSubmissionOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -174,7 +174,7 @@ function Planner({ published }: { published: Plan }) {
       localStorage.removeItem(storageKey)
       setSavedDraft(null)
       setError('')
-      setNotice('已删除本地草稿 · 当前展示已发布规划')
+      setNotice('')
     } catch (error) {
       setError(`删除本地草稿失败：${error instanceof Error ? error.message : String(error)}。草稿未删除，请重试。`)
     }
@@ -262,7 +262,9 @@ function Planner({ published }: { published: Plan }) {
   return <div className={`app-shell ${tab === '业务架构' || tab === '技术架构' ? 'canvas-page' : ''}`}>
     <a className="skip" href="#workspace">跳到规划工作区</a>
     <header className="app-header">
-      <div className="wordmark"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 4h9v9H4zm15 0h9v9h-9zM4 19h9v9H4zm15 0h9v9h-9z" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M13 8h6M8 13v6m16-6v6m-11 5h6" fill="none" stroke="currentColor" strokeWidth="2" /></svg><span>ArchitecturePlanner</span></div>
+      <div className="wordmark" title={plan.name}><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 4h9v9H4zm15 0h9v9h-9zM4 19h9v9H4zm15 0h9v9h-9z" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M13 8h6M8 13v6m16-6v6m-11 5h6" fill="none" stroke="currentColor" strokeWidth="2" /></svg><span>ArchitecturePlanner</span><h1>架构规划台</h1></div>
+      <div className="banner-context"><h2 id="view-title">{tab}{tab === '技术架构' && <span> · Kubernetes · 服务与数据</span>}</h2>{tab !== '技术架构' && <span className="view-count">{tab === '团队成员' ? plan.people.length : tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>
+      <div className="progress-label"><span>已分配</span><strong>{assigned}/{plan.modules.length + plan.components.length}</strong>{dirty && <span className="draft-indicator">未提交</span>}</div>
       <div className="header-actions">
         <IconButton icon="upload" label="导入规划" onClick={() => fileRef.current?.click()} /><IconButton icon="download" label="导出规划" onClick={exportPlan} />
         <IconButton icon="submit" label="提交到 GitHub" className="primary" disabled={busy} onClick={() => setSubmissionOpen(!submissionOpen)} aria-expanded={submissionOpen} />
@@ -288,19 +290,13 @@ function Planner({ published }: { published: Plan }) {
       setPendingImport(null)
       setNotice('规划已替换并保存为本地草稿。')
     }}>确认替换草稿</button><button onClick={() => setPendingImport(null)}>保留当前草稿</button></section>}
-    <div className="workspace-heading"><div><h1>架构规划台</h1><p>{plan.name}</p></div><button className="current-entry" aria-label="查看技术架构与部署现状" onClick={() => setTab('技术架构')}><Icon icon={uiIcon('layer')} decorative />技术架构</button><div className="progress-label"><strong>{assigned}/{plan.modules.length + plan.components.length}</strong><span>已分配</span></div></div>
-    <div className={`workspace-shell ${tab === '技术架构' ? 'current-shell' : ''}`}>
-      <aside className="sidebar">
-        <nav aria-label="规划视图">{tabs.map((item, index) => <IconButton key={item} icon={tabIcons[index]} label={item} aria-current={tab === item ? 'page' : undefined} onClick={() => setTab(item)} />)}</nav>
-        {tab !== '技术架构' && <div className="filter-section"><h2 className="sr-only">筛选</h2><label>搜索模块<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索" /></label>
+    <nav className="view-tabs" aria-label="规划视图">{tabs.map((item, index) => <button type="button" key={item} aria-current={tab === item ? 'page' : undefined} onClick={() => setTab(item)}><Icon icon={uiIcon(tabIcons[index])} decorative />{item}</button>)}</nav>
+    {tab !== '技术架构' && <section className="filter-section" aria-label="筛选"><label>搜索模块<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索" /></label>
           <label>架构层<select value={layer} onChange={event => setLayer(event.target.value)}><option value="">全部架构层</option>{[...new Set(plan.modules.map(module => module.layer))].map(id => <option value={id} key={id}>{layers[id] ?? id}</option>)}</select></label>
           <label>Owner 筛选<select value={ownerFilter} onChange={event => setOwnerFilter(event.target.value)}><option value="">全部成员</option><option value="unassigned">尚未分配</option>{plan.people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
-        </div>}
-        <div className="privacy-note"><Icon icon={uiIcon(dirty ? 'lock' : 'github')} decorative /><strong>{dirty ? '本地草稿' : '已发布规划'}</strong></div>
-        {(tab === '业务架构' || tab === '技术架构') && <footer className="canvas-status"><p role="status">{notice}</p></footer>}
-      </aside>
-      <main id="workspace" className={`workspace ${tab === '原始架构' ? 'original' : ''}`}>
-        <div className="view-heading"><h2>{tab}</h2>{tab !== '技术架构' && <span>{tab === '团队成员' ? plan.people.length : tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>
+    </section>}
+    <div className={`workspace-shell ${tab === '技术架构' ? 'current-shell' : ''}`}>
+      <main id="workspace" aria-labelledby="view-title" className={`workspace ${tab === '原始架构' ? 'original' : ''}`}>
         {tab === '技术架构' && <CurrentArchitecture plan={plan} onComponent={id => { setSelectedComponent(id); setTab('技术组件'); setQuery(''); setOwnerFilter('') }} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} />}
         {tab === '业务架构' && <>{visible.length ? <ReactFlowProvider><Canvas plan={plan} visible={visible} selected={selected} onSelect={setSelected} onChange={apply} /></ReactFlowProvider> : <div className="empty">没有匹配的模块</div>}</>}
         {tab === '分工清单' && <div className="table-wrap"><table><caption className="sr-only">模块、主负责人及协作负责人</caption><thead><tr><th>模块与职责</th><th>架构层</th><th>主 owner</th><th>协作 owner</th><th>状态</th></tr></thead><tbody>{visible.map(module => <tr key={module.id} className={selected === module.id ? 'selected-row' : ''}><td><button className="module-link" aria-label={`${module.id} ${module.name}`} onClick={() => setSelected(module.id)}><span className="code">{module.id}</span>{module.name}</button><small>{module.summary}</small></td><td>{layers[module.layer] ?? module.layer}</td>{(['primary', 'secondary'] as const).map(role => <td key={role}><div className="owner-cell"><OwnerAvatars owners={module.owners.filter(owner => owner.role === role)} people={plan.people} /><span>{module.owners.filter(owner => owner.role === role).map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、') || (role === 'primary' ? '未分配' : '—')}</span></div></td>)}<td><span className={`state state-${module.status}`}>{statuses[module.status]}</span></td></tr>)}</tbody></table>{!visible.length && <div className="empty">没有匹配的模块</div>}</div>}
@@ -319,6 +315,6 @@ function Planner({ published }: { published: Plan }) {
       {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && tab !== '技术架构' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} highlightOwners={tab === '业务架构' && visible.some(item => item.id === selected)} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); if (tab !== '业务架构') setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside>}
       {tab === '业务架构' && !module && <aside className="inspector"><p className="muted">点击卡片查看模块；再次点击取消选中。</p></aside>}
     </div>
-    {tab !== '业务架构' && tab !== '技术架构' && <footer><p role="status">{notice}</p></footer>}
+    <footer className="sr-only"><p role="status">{notice}</p></footer>
   </div>
 }
