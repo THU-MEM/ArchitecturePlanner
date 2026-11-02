@@ -22,6 +22,17 @@ test('technical facts and relationships have unique IDs and complete evidence', 
   assert.equal(technicalFacts.find(fact => fact.id === 'mem-gateway')!.runtime, 'blocked')
   assert.match(technicalFacts.find(fact => fact.id === 'mem-gateway')!.observation, /ErrImageNeverPull/)
   assert.equal(technicalFacts.find(fact => fact.id === 'sso-hub')!.runtime, 'not-observed')
+  const database = technicalFacts.find(fact => fact.id === 'mem-postgres')!
+  assert.equal(database.runtime, 'planned')
+  assert.equal(database.stack, 'PostgreSQL · SQL')
+  assert.match(database.detail, /弃用 SQLite/)
+  assert.match(database.observation, /尚未核实/)
+  assert.ok(!technicalFacts.some(fact => fact.id === 'mem-sqlite'))
+  assert.deepEqual(technicalFlows.find(flow => flow.id === 'model-postgres'), {
+    id: 'model-postgres', source: 'mem-gateway', target: 'mem-postgres',
+    label: '目标 PostgreSQL · 待迁移', evidence: 'planned', detail: '目标 PostgreSQL · 待迁移',
+  })
+  assert.equal(technicalFlows.find(flow => flow.id === 'gateway-store')!.evidence, 'planned')
   assert.ok(!technicalFlows.some(flow => flow.evidence === 'observed' && ['template-database', 'sso-redis', 'sso-minio', 'llmwiki', 'case-management'].includes(flow.target)))
 })
 

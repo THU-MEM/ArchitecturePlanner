@@ -90,11 +90,11 @@ export const projectFacts: ProjectFact[] = [
     sources: snapshot,
   },
   {
-    id: 'mem-data', name: '网关数据', project: 'MEM-AI', state: 'implemented',
-    stack: 'PostgreSQL · Redis · GORM', position: { x: 730, y: 495 },
+    id: 'mem-data', name: '网关数据', project: 'MEM-AI', state: 'planned',
+    stack: 'PostgreSQL · GORM', position: { x: 730, y: 495 },
     components: ['postgres'], modules: ['M16'],
-    detail: 'MEM-AI 独立维护账户、模型 key、渠道、额度和日志。默认 Compose 提供 PostgreSQL 与 Redis，数据库驱动另支持其他后端；不与教学数据中心共享数据库或权限。',
-    sources: [{ label: '公开默认编排（不是生产清单）', href: `${memSource}docker-compose.yml` }],
+    detail: 'MEM-AI 独立维护账户、模型 key、渠道、额度和日志。目标方案为弃用 SQLite、接入 PostgreSQL；不与教学数据中心共享数据库或权限。迁移与接入验收尚未核实。',
+    sources: [{ label: '项目方架构纠正 · 2026-11-02：PostgreSQL 目标方案' }, { label: '公开默认编排（不是生产清单）', href: `${memSource}docker-compose.yml` }],
   },
 ]
 
@@ -112,7 +112,7 @@ export const currentFlows: {
   { id: 'events-store', source: 'sso-events', target: 'sso-data', label: '持久化 · 分析', state: 'implemented', detail: 'PostgreSQL、Stream 与 ClickHouse 事件链路。' },
   { id: 'hub-store', source: 'sso-hub', target: 'sso-data', sourcePort: 'left', targetPort: 'left', label: '业务数据', state: 'implemented', detail: 'hub-api 维护教学数据，不直接写网关账户库。' },
   { id: 'provider-relay', source: 'mem-gateway', target: 'mem-providers', label: '路由 · 流式', state: 'implemented', detail: 'Provider 凭证保留在网关服务端。' },
-  { id: 'gateway-store', source: 'mem-gateway', target: 'mem-data', sourcePort: 'right', targetPort: 'right', label: '账户 · 额度', state: 'implemented', detail: '模型账户与额度由 MEM-AI 独立维护。' },
+  { id: 'gateway-store', source: 'mem-gateway', target: 'mem-data', sourcePort: 'right', targetPort: 'right', label: '账户 · 额度', state: 'planned', detail: '模型账户与额度由 MEM-AI 独立维护；目标接入 PostgreSQL，弃用 SQLite，迁移尚未验收。' },
   { id: 'client-hub', source: 'client-integration', target: 'sso-hub', sourcePort: 'left', targetPort: 'right', label: '业务 API', state: 'planned', detail: '完整业务应用的统一身份和数据接入待联调。' },
   { id: 'client-events', source: 'client-integration', target: 'sso-events', sourcePort: 'left', targetPort: 'right', label: 'SDK 事件', state: 'planned', detail: '外部业务应用的 SDK 与事件注册接入仍待联调。' },
   { id: 'client-model', source: 'client-integration', target: 'mem-gateway', sourcePort: 'right', targetPort: 'left', label: '模型 API key', state: 'planned', detail: '规划的模型调用通过网关；不能用用户 SSO token 替代模型 key。' },

@@ -30,7 +30,7 @@ const observations: Partial<Record<string, Pick<TechnicalFact, 'runtime' | 'obse
   'sso-hub': { runtime: 'not-observed', observation: '本次集群清单中没有 hub-api workload。部署生成器定义该服务及其 PostgreSQL、Redis、MinIO 依赖。' },
   'sso-events': { runtime: 'not-observed', observation: '本次集群清单中没有 event-ingest workload；Redis 和 ClickHouse 也未出现。事件链路为源码能力，不是现场已打通的链路。' },
   'mem-web': { runtime: 'blocked', observation: '控制台随 MEM-AI 应用提供，不是独立 Pod；共享当前网关未就绪的运行状态。' },
-  'mem-data': { runtime: 'source', observation: '默认 Compose 与部署模板存在不同数据库方案。现场 MEM-AI 使用 SQLite 配置并挂载 PVC；不能把 PostgreSQL / MySQL / Redis 模板误认为网关线上依赖。' },
+  'mem-data': { runtime: 'planned', observation: '目标方案已明确：MEM-AI 弃用 SQLite，接入 PostgreSQL。18:40 的只读快照仍见旧 SQLite 配置，不代表迁移完成；MySQL 部署模板不是目标方案。' },
 }
 
 function fact(id: string, name: string, project: string, stack: string, runtime: RuntimeState, detail: string, observation: string, components: string[] = []): TechnicalFact {
@@ -78,9 +78,12 @@ export const technicalFacts: TechnicalFact[] = [
   fact('sso-postgres', '身份数据库', 'SSO 数据', 'PostgreSQL · pgvector', 'ready',
     'Keycloak 使用独立身份数据库；镜像具备 pgvector 能力，不代表教学业务与向量链路已经启用。',
     'sso-datacenter：postgres Deployment 1/1，Service 5432 有 1 个就绪端点，20Gi PVC Bound。', ['postgres', 'vector-index']),
-  fact('mem-sqlite', '网关本地数据库', 'MEM-AI 数据', 'SQLite · PVC', 'blocked',
-    '当前工作负载配置 SQLite 路径并挂载数据卷；区别于源码默认 Compose 的 PostgreSQL/Redis 及部署模板的 MySQL/Redis。',
-    '已核对 SQLITE_PATH 配置与 1Gi Bound PVC；应用尚未启动，未读取数据库内容，也未验收持久化。'),
+  {
+    ...fact('mem-postgres', '网关 PostgreSQL', 'MEM-AI 数据', 'PostgreSQL · SQL', 'planned',
+      'MEM-AI 弃用 SQLite，目标接入 PostgreSQL；应用数据库与教学、身份数据库保持独立权限边界，不推断为共用同一实例。',
+      '项目方确认的目标方案；尚未核实 PostgreSQL 接入、数据迁移或持久化验收。18:40 快照中的 SQLite / 1Gi PVC 仅为待替换的旧配置。', ['postgres']),
+    state: 'planned', sources: [{ label: '项目方架构纠正 · 2026-11-02：弃用 SQLite，接入 PostgreSQL' }],
+  },
   fact('sso-redis', '缓存与事件 Stream', 'SSO 数据', 'Redis · Streams', 'not-observed',
     'SSO 部署生成器定义 Redis，供业务缓存、限流与事件流使用。',
     '本次集群 workload / Service 清单未见 Redis；仅有模板不算部署。', ['redis-stream']),
@@ -106,8 +109,8 @@ export const technicalFacts: TechnicalFact[] = [
     'LLMWiki 的内容文件、索引、任务与图谱保存在自身工作空间，不依赖平台 PostgreSQL 或 MinIO。',
     '依据 LLMWiki README 与独立部署说明；运行数据未读取。'),
   fact('template-database', '网关部署模板依赖', '部署模板', 'MySQL · Redis', 'source',
-    'server/deploy/ai-platform 的 new-api 模板采用独立 MySQL TLS 与 Redis；与现场 mem-ai 命名及 SQLite 配置不同，不能直接套用为当前运行图。',
-    '只读核对模板；本次集群没有 new-api workload、MySQL 或 Redis。'),
+    'server/deploy/ai-platform 的旧 new-api 模板采用独立 MySQL TLS 与 Redis；不是 MEM-AI 当前已明确的 PostgreSQL 目标方案。',
+    '只读核对旧模板；本次集群没有 new-api workload、MySQL 或 Redis。不将旧模板连接为目标数据库。'),
 ]
 
 function edge(id: string, source: string, target: string, label: string, evidence: TechnicalFlow['evidence'], detail = label): TechnicalFlow {
@@ -127,9 +130,8 @@ export const technicalFlows: TechnicalFlow[] = [
   edge('identity-route', 'apisix', 'sso-identity', 'Service 8080', 'observed'),
   edge('model-route', 'apisix', 'mem-gateway', 'Service 3000 · 0 端点', 'observed'),
   edge('identity-db', 'sso-identity', 'sso-postgres', '身份持久化', 'observed'),
-  edge('model-sqlite', 'mem-gateway', 'mem-sqlite', '配置 / 卷挂载', 'observed'),
+  edge('model-postgres', 'mem-gateway', 'mem-postgres', '目标 PostgreSQL · 待迁移', 'planned'),
   edge('postgres-volume', 'sso-postgres', 'local-storage', '20Gi PVC', 'observed'),
-  edge('sqlite-volume', 'mem-sqlite', 'local-storage', '1Gi PVC', 'observed'),
   edge('etcd-volume', 'apisix-etcd', 'local-storage', '5Gi PVC', 'observed'),
   edge('hub-redis', 'sso-hub', 'sso-redis', '缓存 / 限流', 'source'),
   edge('hub-assets', 'sso-hub', 'sso-minio', '资产 S3', 'source'),
@@ -138,5 +140,4 @@ export const technicalFlows: TechnicalFlow[] = [
   edge('mcp-api', 'sso-mcp', 'sso-hub', '业务 API', 'source'),
   edge('wiki-workspace', 'llmwiki', 'wiki-data', '独立工作空间', 'source'),
   edge('case-storage', 'case-management', 'case-data', '独立数据依赖', 'source'),
-  edge('gateway-template', 'mem-data', 'template-database', '部署模板方案（非现场）', 'source'),
 ]

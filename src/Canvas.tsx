@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Background, BaseEdge, Controls, getSmoothStepPath, Handle, MarkerType, Position, ReactFlow, useNodesInitialized, useReactFlow } from '@xyflow/react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Background, BaseEdge, Controls, getNodesBounds, getSmoothStepPath, Handle, MarkerType, Position, ReactFlow, useNodesInitialized, useReactFlow } from '@xyflow/react'
 import type { Edge, EdgeProps, Node, NodeProps } from '@xyflow/react'
 import { addRelationship, layers, statuses } from './plan.ts'
 import type { Module, Person, Plan } from './plan.ts'
@@ -42,7 +42,8 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
   const [fittedLayoutKey, setFittedLayoutKey] = useState<string | null>(null)
   const [layoutAttempt, setLayoutAttempt] = useState(0)
   const initialized = useNodesInitialized()
-  const { fitView } = useReactFlow<PlannerNode>()
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const { fitView, getNodes, getViewport, setCenter } = useReactFlow<PlannerNode>()
   const availableEdges = useMemo(() => plan.relationships.filter(edge => visible.some(module => module.id === edge.source) && visible.some(module => module.id === edge.target)), [plan.relationships, visible])
   const neighborhood = useMemo(() => ({
     active: visible.some(module => module.id === selected),
@@ -77,13 +78,22 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
     let cancelled = false
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => {
-        void fitView({ padding: 0.12, maxZoom: 0.85, minZoom: 0.04 }).then(() => {
+        void fitView({ padding: 0.12, maxZoom: 0.85, minZoom: 0.75 }).then(async () => {
+          if (cancelled) return
+          const nodes = getNodes()
+          const bounds = getNodesBounds(nodes)
+          const surface = canvasRef.current?.querySelector('.react-flow')?.getBoundingClientRect()
+          const zoom = getViewport().zoom
+          const anchor = nodes.find(node => node.selected) ?? nodes[0]
+          if (surface && anchor && (bounds.width * zoom > surface.width || bounds.height * zoom > surface.height)) {
+            await setCenter(anchor.position.x + (anchor.measured?.width ?? 250) / 2, anchor.position.y + (anchor.measured?.height ?? 145) / 2, { zoom })
+          }
           if (!cancelled) setFittedLayoutKey(completedLayoutKey)
         })
       })
     })
     return () => { cancelled = true; cancelAnimationFrame(frame) }
-  }, [completedLayoutKey, layoutComputing, fitView])
+  }, [completedLayoutKey, layoutComputing, fitView, getNodes, getViewport, setCenter])
   const nodes = useMemo<PlannerNode[]>(() => visible.map(module => {
     const current = selected === module.id
     const upstream = neighborhood.upstream.has(module.id)
@@ -114,7 +124,7 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
         markerEnd: { type: MarkerType.ArrowClosed, color },
       }
     })
-  return <div className="canvas" onKeyDownCapture={event => {
+  return <div ref={canvasRef} className="canvas" onKeyDownCapture={event => {
     if (!(event.target instanceof HTMLElement) || !event.target.matches('.react-flow__node')) return
     const id = event.target.dataset.id
     if (!id) return
@@ -131,6 +141,7 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
     <div className="canvas-toolbar" aria-label="拓扑布局工具">
       <div className="canvas-toolbar-row">
         <button type="button" onClick={() => setLayoutAttempt(value => value + 1)} disabled={layoutPending}>重新布局</button>
+        <button type="button" disabled={layoutPending} onClick={() => void fitView({ padding: 0.12, maxZoom: 0.85, minZoom: 0.04 })}>适应全图</button>
         <label className="check"><input type="checkbox" checked={!focusOnly} onChange={event => setFocusOnly(!event.target.checked)} />全部连线</label>
         <output aria-label="显示的依赖数">{edges.length}/{availableEdges.length}</output>
         <div className="edge-legend" aria-label="相对选中模块的连线方向"><span className="legend-upstream">上游 → 当前</span><span className="legend-downstream">当前 → 下游</span><span>其他依赖</span></div>

@@ -52,7 +52,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   const [result, setResult] = useState<{ key: string; layout: GraphLayout | null; error: string } | null>(null)
   const [fittedKey, setFittedKey] = useState('')
   const flowRef = useRef<ReactFlowInstance<ProjectNode, DependencyEdge> | null>(null)
-  const facts = technicalFacts.filter(item => scope === 'all' || (scope === 'runtime' ? item.runtime === 'ready' || item.runtime === 'blocked' : item.runtime !== 'ready' && item.runtime !== 'blocked'))
+  const facts = technicalFacts.filter(item => scope === 'all' || (scope === 'runtime' ? item.runtime === 'ready' || item.runtime === 'blocked' || item.id === 'mem-postgres' : item.runtime !== 'ready' && item.runtime !== 'blocked'))
   const flows = technicalFlows.filter(flow => facts.some(item => item.id === flow.source) && facts.some(item => item.id === flow.target))
   const layoutInput = JSON.stringify({ modules: facts.map(({ id }) => ({ id })), relationships: flows.map(({ id, source, target }) => ({ id, source, target })) })
   const layoutKey = `${attempt}:${layoutInput}`
@@ -106,7 +106,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
     <div className="current-heading"><h3>Kubernetes · 服务与数据</h3><p>源码已实现 ≠ 生产已上线</p></div>
     <p className="runtime-summary">SSH 核对：{runtimeSnapshot.inspectedAt} · {runtimeSnapshot.nodes} 节点 / {runtimeSnapshot.pods} Pod · {runtimeSnapshot.running} Running / {runtimeSnapshot.pending} Pending · 只读快照，非实时监控</p>
     <div className="technical-toolbar">
-    <label>范围<select aria-label="技术架构范围" value={scope} onChange={event => { setScope(event.target.value); setSelected('') }}><option value="all">全部技术组件</option><option value="runtime">运行现场</option><option value="source">源码与待接入</option></select></label>
+    <label>范围<select aria-label="技术架构范围" value={scope} onChange={event => { setScope(event.target.value); setSelected('') }}><option value="all">全部技术组件</option><option value="runtime">运行现场与迁移目标</option><option value="source">源码与待接入</option></select></label>
     <label className="current-picker">项目组件<select value={selected} disabled={pending} onChange={event => {
       const node = nodes.find(item => item.id === event.target.value)
       setSelected(event.target.value)

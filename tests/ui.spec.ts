@@ -273,13 +273,20 @@ test('business and technical navigation preserves the plan and distinguishes run
   await expect(detail).toContainText('ErrImageNeverPull')
   await expect(detail).toContainText('0/1')
   await expect(page.locator('[data-project="apisix"]')).toHaveClass(/node-upstream/)
-  await expect(page.locator('[data-project="mem-sqlite"]')).toHaveClass(/node-downstream/)
+  await expect(page.locator('[data-project="mem-postgres"]')).toHaveClass(/node-downstream/)
+  await expect(page.locator('[data-project="mem-postgres"]')).toHaveAttribute('data-runtime', 'planned')
+  await expect(page.locator('[data-flow="model-postgres"]')).toHaveAttribute('data-evidence', 'planned')
   await page.getByRole('button', { name: '查看现状 MEM-AI 模型网关', exact: true }).click()
   await expect(page.getByLabel('项目组件')).toHaveValue('')
   await expect(page.locator('.current-map .node-dimmed')).toHaveCount(0)
   await page.getByLabel('技术架构范围').selectOption('runtime')
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
-  await expect(page.locator('[data-project]')).toHaveCount(technicalFacts.filter(fact => fact.runtime === 'ready' || fact.runtime === 'blocked').length)
+  await expect(page.locator('[data-project]')).toHaveCount(technicalFacts.filter(fact => fact.runtime === 'ready' || fact.runtime === 'blocked' || fact.id === 'mem-postgres').length)
+  await page.getByLabel('项目组件').selectOption('mem-postgres')
+  await expect(detail).toContainText('MEM-AI 弃用 SQLite')
+  await expect(detail).toContainText('尚未核实 PostgreSQL 接入')
+  await expect(detail.getByRole('heading', { name: '网关 PostgreSQL', exact: true })).toBeVisible()
+  await page.getByLabel('项目组件').selectOption('')
   await expect(page.locator('[data-project="sso-hub"]')).toHaveCount(0)
   await page.getByRole('button', { name: '查看现状 Keycloak', exact: true }).focus()
   await page.keyboard.press('Enter')
@@ -424,6 +431,9 @@ test('published topology automatically unfolds all dependencies without creating
     return row.contains(document.querySelector('input[type="checkbox"]')) && element.getBoundingClientRect().right <= row.getBoundingClientRect().right
   })).toBeTruthy()
   await expect(page.getByRole('alert')).toHaveCount(0)
+  const readableNode = await page.locator('.react-flow__node[data-id="M01"]').boundingBox()
+  expect(readableNode!.width).toBeGreaterThanOrEqual(187)
+  await page.getByRole('button', { name: '适应全图', exact: true }).click()
   await expect.poll(() => page.locator('.react-flow__node').evaluateAll(elements => elements.every(element => {
     const node = element.getBoundingClientRect()
     const viewport = element.closest('.react-flow')!.getBoundingClientRect()
@@ -438,6 +448,50 @@ test('published topology automatically unfolds all dependencies without creating
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
   await page.screenshot({ path: '.impeccable/review/topology-mobile.png', animations: 'disabled' })
+})
+
+test('fresh business canvases stay spread out on phone, landscape and desktop without automatic whole-graph shrinking', async ({ page }) => {
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: publishedPlan }))
+  let geometry: { id: string | undefined; transform: string; width: number; height: number }[] | undefined
+  for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport)
+    await page.goto('./')
+    await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+    await page.locator('.canvas').scrollIntoViewIfNeeded()
+    const node = page.locator('.react-flow__node[data-id="M01"]')
+    await expect(node).toBeInViewport()
+    expect((await node.boundingBox())!.width).toBeGreaterThanOrEqual(187)
+    const current = await page.locator('.react-flow__node').evaluateAll(elements => elements.map(element => {
+      const node = element as HTMLElement
+      return { id: node.dataset.id, transform: node.style.transform, width: node.offsetWidth, height: node.offsetHeight }
+    }).sort((a, b) => a.id!.localeCompare(b.id!)))
+    if (geometry) expect(current).toEqual(geometry)
+    else geometry = current
+    await expect(page.locator('.react-flow__edge')).toHaveCount(publishedPlan.relationships.length)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+    await mkdir('.impeccable/review', { recursive: true })
+    await page.screenshot({ path: `.impeccable/review/topology-readable-${viewport.width}.png`, animations: 'disabled' })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.locator('.canvas').scrollIntoViewIfNeeded()
+  expect((await page.locator('.react-flow__node[data-id="M01"]').boundingBox())!.width).toBeGreaterThanOrEqual(187)
+  await page.getByRole('button', { name: '重新布局', exact: true }).click()
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  const original = await page.locator('.react-flow__viewport').getAttribute('style')
+  const pane = await page.locator('.react-flow__pane').boundingBox()
+  await page.mouse.move(pane!.x + 15, pane!.y + 15)
+  await page.mouse.down()
+  await page.mouse.move(pane!.x + 100, pane!.y + 70, { steps: 8 })
+  await page.mouse.up()
+  await expect(page.locator('.react-flow__viewport')).not.toHaveAttribute('style', original!)
+  expect((await page.locator('.react-flow__node[data-id="M01"]').boundingBox())!.width).toBeGreaterThanOrEqual(187)
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  await page.getByRole('button', { name: '适应全图', exact: true }).click()
+  await expect.poll(() => page.locator('.react-flow__node').evaluateAll(elements => elements.every(element => {
+    const box = element.getBoundingClientRect()
+    const viewport = element.closest('.react-flow')!.getBoundingClientRect()
+    return box.left >= viewport.left && box.right <= viewport.right && box.top >= viewport.top && box.bottom <= viewport.bottom
+  }))).toBeTruthy()
 })
 
 test('selecting modules highlights direct upstream and downstream neighbors, handles feedback and dims only unrelated cards', async ({ page }) => {
@@ -531,6 +585,7 @@ test('canvas selection toggles off by repeat click, keyboard and blank canvas wi
   await page.locator('.canvas').scrollIntoViewIfNeeded()
   await page.getByRole('button', { name: '重新布局', exact: true }).click()
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: '适应全图', exact: true }).click()
   await node.click()
   await expect(node).toHaveClass(/selected/)
   await node.click()
