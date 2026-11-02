@@ -64,7 +64,7 @@
 .planner-node p { font-size: 11px; color: #4c6679; padding: 0 12px 12px; min-height: 44px; }
 .node-footer { padding: 9px 12px; border-top: 1px solid #dce5ea; font-size: 12px; display: flex; justify-content: space-between; gap: 8px; color: #315468; overflow-wrap: anywhere; }
 .node-meta .icon { width: 20px; height: 20px; }
-.node-meta .code { flex-shrink: 0; }
+.node-meta .code { flex-shrink: 0; font-size: 12px; }
 .node-state { width: 9px; height: 9px; flex-shrink: 0; border: 1px solid #688596; border-radius: 50%; margin-left: auto; }
 .status-active { background: #dfaa30; border-color: #b48018; }
 .status-done { background: #31866a; border-color: #236d55; }
