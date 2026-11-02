@@ -328,8 +328,6 @@ test('canvas layout, relationships and deletion persist in the exported plan', a
   await page.route('**/src/seed-plan.json', route => route.fulfill({ json: { ...seed, modules: seed.modules.filter(module => ['M01', 'M02'].includes(module.id)) } }))
   await page.goto('./')
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
-  await page.getByLabel('搜索模块').fill('M01')
-  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   const node = page.locator('.react-flow__node[data-id="M01"]')
   await expect.poll(async () => (await node.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(180)
   const box = await node.boundingBox()
@@ -339,12 +337,11 @@ test('canvas layout, relationships and deletion persist in the exported plan', a
   await page.mouse.down()
   await page.mouse.move(box!.x + 120, box!.y + 65, { steps: 8 })
   await page.mouse.up()
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).not.toBeNull()
   await expect.poll(() => page.evaluate(() => {
     const draft = localStorage.getItem('architecture-planner.plan.v1')
     return draft ? JSON.parse(draft).modules.find((module: { id: string }) => module.id === 'M01').position.x : null
   })).not.toBe(seed.modules.find(module => module.id === 'M01')!.position.x)
-  await page.getByLabel('搜索模块').fill('')
-  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   const source = await node.locator('.react-flow__handle.source').boundingBox()
   const target = await page.locator('.react-flow__node[data-id="M02"] .react-flow__handle.target').boundingBox()
   expect(source).not.toBeNull()

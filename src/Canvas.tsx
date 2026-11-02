@@ -40,6 +40,7 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
   const [focusOnly, setFocusOnly] = useState(false)
   const [sizes, setSizes] = useState<Record<string, NodeSize>>({})
   const [layoutState, setLayoutState] = useState<{ key: string; value: GraphLayout | null; error: string } | null>(null)
+  const [fittedLayoutKey, setFittedLayoutKey] = useState<string | null>(null)
   const [layoutAttempt, setLayoutAttempt] = useState(0)
   const initialized = useNodesInitialized()
   const { fitView } = useReactFlow<PlannerNode>()
@@ -47,7 +48,8 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
   const layoutInput = JSON.stringify({ modules: visible.map(({ id }) => ({ id })), relationships: availableEdges, sizes })
   const layoutKey = `${layoutAttempt}:${layoutInput}`
   const layout = layoutState?.value
-  const layoutPending = layoutState?.key !== layoutKey
+  const layoutComputing = layoutState?.key !== layoutKey
+  const layoutPending = layoutComputing || fittedLayoutKey !== layoutKey
   const layoutError = layoutPending ? '' : layoutState?.error
   const completedLayoutKey = layoutState?.key
   useEffect(() => {
@@ -67,12 +69,17 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
     return () => { cancelled = true }
   }, [initialized, layoutInput, layoutKey])
   useEffect(() => {
-    if (!completedLayoutKey || layoutPending) return
+    if (!completedLayoutKey || layoutComputing) return
+    let cancelled = false
     let frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => { void fitView({ padding: 0.12, maxZoom: 0.85, minZoom: 0.04 }) })
+      frame = requestAnimationFrame(() => {
+        void fitView({ padding: 0.12, maxZoom: 0.85, minZoom: 0.04 }).then(() => {
+          if (!cancelled) setFittedLayoutKey(completedLayoutKey)
+        })
+      })
     })
-    return () => cancelAnimationFrame(frame)
-  }, [completedLayoutKey, layoutPending, fitView])
+    return () => { cancelled = true; cancelAnimationFrame(frame) }
+  }, [completedLayoutKey, layoutComputing, fitView])
   const nodes = useMemo<PlannerNode[]>(() => visible.map(module => ({
     id: module.id, type: 'module', position: layout?.positions[module.id] ?? module.position, selected: selected === module.id, deletable: false, measured: sizes[module.id],
     data: {

@@ -101,7 +101,7 @@ test('published JSON is authoritative and local drafts are recovered only on req
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('architecture-planner.plan.v1')!).modules.find((module: { id: string }) => module.id === 'M01').name)).toBe('Older draft')
   await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   await expect(page.getByLabel('模块名称')).toHaveValue('Older draft')
-  await expect(page.getByRole('status')).toContainText('本地草稿')
+  await expect(page.locator('footer').getByRole('status')).toContainText('本地草稿')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: '提交到 GitHub', exact: true }).click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
