@@ -40,8 +40,8 @@ export default function ArchitectureCanvas() {
   const [busy, setBusy] = useState(false)
   const [elementCount, setElementCount] = useState(0)
   const [pendingImport, setPendingImport] = useState<ExcalidrawInitialDataState | null>(null)
+  const [savedRaw, setSavedRaw] = useState('')
   const lastSaved = useRef('')
-  const savedRaw = useRef('')
   const stageRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -50,7 +50,7 @@ export default function ArchitectureCanvas() {
     async function load() {
       try {
         const raw = localStorage.getItem(drawingStorageKey)
-        savedRaw.current = raw ?? ''
+        if (!cancelled) setSavedRaw(raw ?? '')
         const data = raw ? await loadFromBlob(new Blob([raw], { type: 'application/json' }), null, null) : blankScene
         if (!cancelled) {
           lastSaved.current = raw ?? ''
@@ -111,7 +111,7 @@ export default function ArchitectureCanvas() {
     if (!api) return
     api.resetScene()
     if (data.files) api.addFiles(Object.values(data.files))
-    api.updateScene({ elements: data.elements, appState: { ...blankScene.appState, ...data.appState }, captureUpdate: CaptureUpdateAction.IMMEDIATELY })
+    api.updateScene({ elements: data.elements, appState: data.appState, captureUpdate: CaptureUpdateAction.IMMEDIATELY })
     api.scrollToContent(undefined, { fitToViewport: true })
     setPendingImport(null)
   }
@@ -174,7 +174,7 @@ export default function ArchitectureCanvas() {
   if (loadError) return <section className="drawing-recovery" aria-label="画布恢复">
     <p className="error" role="alert">{loadError}</p>
     <button type="button" onClick={() => setAttempt(value => value + 1)}>重试读取画布</button>
-    {savedRaw.current && <button type="button" onClick={() => download(new Blob([savedRaw.current], { type: 'application/json' }), 'architecture-canvas-recovery.excalidraw')}>下载原始草稿备份</button>}
+    {savedRaw && <button type="button" onClick={() => download(new Blob([savedRaw], { type: 'application/json' }), 'architecture-canvas-recovery.excalidraw')}>下载原始草稿备份</button>}
     <button type="button" onClick={() => {
       try {
         localStorage.removeItem(drawingStorageKey)
