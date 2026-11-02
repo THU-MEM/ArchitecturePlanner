@@ -293,6 +293,13 @@ test('published topology automatically unfolds all dependencies without creating
   await expect(page.locator('.react-flow__node[data-id="M01"] .node-meta')).toHaveAttribute('title', new RegExp(publishedPlan.modules.find(module => module.id === 'M01')!.name))
   const layerLegend = page.getByRole('group', { name: '架构层颜色图例', exact: true })
   await expect(layerLegend.locator('.layer-key')).toHaveCount(5)
+  await expect(page.locator('.canvas-toolbar-row')).toHaveCount(1)
+  expect(await page.locator('.edge-legend').evaluate(element => {
+    const toggle = document.querySelector('.canvas-toolbar .check')!.getBoundingClientRect()
+    const legend = element.getBoundingClientRect()
+    return Math.abs((legend.top + legend.bottom) / 2 - (toggle.top + toggle.bottom) / 2) <= 1
+  })).toBeTruthy()
+  expect(await page.locator('.canvas-toolbar').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(65)
   expect(await layerLegend.evaluate(element => {
     const row = element.closest('.canvas-toolbar-row')!
     return row.contains(document.querySelector('input[type="checkbox"]')) && element.getBoundingClientRect().right <= row.getBoundingClientRect().right
@@ -312,6 +319,52 @@ test('published topology automatically unfolds all dependencies without creating
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
   await page.screenshot({ path: '.impeccable/review/topology-mobile.png', animations: 'disabled' })
+})
+
+test('selecting modules highlights direct upstream and downstream neighbors, handles feedback and dims only unrelated cards', async ({ page }) => {
+  const plan = {
+    ...seed,
+    modules: seed.modules.filter(module => ['M01', 'M02', 'M03', 'M04', 'M05'].includes(module.id)),
+    relationships: [
+      { id: 'upstream', source: 'M01', target: 'M02' },
+      { id: 'downstream', source: 'M02', target: 'M03' },
+      { id: 'feedback-out', source: 'M02', target: 'M04' },
+      { id: 'feedback-in', source: 'M04', target: 'M02' },
+    ],
+  }
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`)
+  const originalViewport = await page.locator('.react-flow__viewport').getAttribute('style')
+  await node('M02').click()
+  await expect(node('M02')).toHaveClass(/selected/)
+  await expect(node('M02').locator('.planner-node')).toHaveCSS('opacity', '1')
+  await expect(node('M01')).toHaveClass(/node-upstream/)
+  await expect(node('M03')).toHaveClass(/node-downstream/)
+  await expect(node('M04')).toHaveClass(/node-upstream/)
+  await expect(node('M04')).toHaveClass(/node-downstream/)
+  await expect(node('M04')).toHaveAttribute('aria-label', /上游与下游/)
+  await expect(node('M01').locator('.planner-node')).toHaveCSS('box-shadow', /rgba\(22, 75, 135,/)
+  await expect(node('M03').locator('.planner-node')).toHaveCSS('box-shadow', /rgba\(255, 229, 153,/)
+  await expect(node('M04').locator('.planner-node')).toHaveCSS('box-shadow', /rgba\(22, 75, 135,.*rgba\(255, 229, 153,/)
+  await expect(node('M05').locator('.planner-node')).toHaveCSS('opacity', '0.28')
+  await expect(page.locator('.node-dimmed')).toHaveCount(1)
+  await expect(page.locator('.react-flow__viewport')).toHaveAttribute('style', originalViewport!)
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/topology-focus.png', animations: 'disabled' })
+  await node('M05').click()
+  await expect(node('M05')).toHaveClass(/selected/)
+  await expect(page.locator('.node-dimmed')).toHaveCount(4)
+  await node('M02').focus()
+  await page.keyboard.press('Enter')
+  await expect(node('M02')).toHaveClass(/selected/)
+  await expect(node('M03')).toHaveClass(/node-downstream/)
+  await node('M05').click()
+  await page.getByLabel('搜索模块').fill('M01')
+  await expect(page.locator('.node-dimmed')).toHaveCount(0)
+  await expect(page.locator('.react-flow__edge')).toHaveCount(0)
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
 })
 
 test('workspace renders without page errors or viewport overflow at desktop and mobile sizes', async ({ page }) => {

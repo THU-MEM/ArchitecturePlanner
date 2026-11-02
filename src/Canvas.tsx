@@ -44,6 +44,11 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
   const initialized = useNodesInitialized()
   const { fitView } = useReactFlow<PlannerNode>()
   const availableEdges = useMemo(() => plan.relationships.filter(edge => visible.some(module => module.id === edge.source) && visible.some(module => module.id === edge.target)), [plan.relationships, visible])
+  const neighborhood = useMemo(() => ({
+    active: visible.some(module => module.id === selected),
+    upstream: new Set(availableEdges.filter(edge => edge.target === selected).map(edge => edge.source)),
+    downstream: new Set(availableEdges.filter(edge => edge.source === selected).map(edge => edge.target)),
+  }), [availableEdges, visible, selected])
   const layoutInput = JSON.stringify({ modules: visible.map(({ id }) => ({ id })), relationships: availableEdges, sizes })
   const layoutKey = `${layoutAttempt}:${layoutInput}`
   const layout = layoutState?.value
@@ -79,15 +84,24 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
     })
     return () => { cancelled = true; cancelAnimationFrame(frame) }
   }, [completedLayoutKey, layoutComputing, fitView])
-  const nodes = useMemo<PlannerNode[]>(() => visible.map(module => ({
-    id: module.id, type: 'module', position: layout?.positions[module.id] ?? module.position, selected: selected === module.id, deletable: false, measured: sizes[module.id],
-    data: {
-      module,
-      people: plan.people,
-      logos: [...new Map(plan.components.filter(component => module.components.includes(component.id)).flatMap(componentIcons).filter(icon => icon.brand).map(icon => [icon.src, icon])).values()].slice(0, 6),
-    },
-    ariaLabel: `${module.id} ${module.name}`,
-  })), [visible, plan.people, plan.components, selected, sizes, layout])
+  const nodes = useMemo<PlannerNode[]>(() => visible.map(module => {
+    const current = selected === module.id
+    const upstream = neighborhood.upstream.has(module.id)
+    const downstream = neighborhood.downstream.has(module.id)
+    const dimmed = neighborhood.active && !current && !upstream && !downstream
+    const relation = current ? '当前模块' : upstream && downstream ? '上游与下游' : upstream ? '上游模块' : downstream ? '下游模块' : ''
+    return {
+      id: module.id, type: 'module', position: layout?.positions[module.id] ?? module.position, selected: current, deletable: false, measured: sizes[module.id],
+      className: [upstream && 'node-upstream', downstream && 'node-downstream', dimmed && 'node-dimmed'].filter(Boolean).join(' '),
+      zIndex: current ? 3 : upstream || downstream ? 2 : 0,
+      data: {
+        module,
+        people: plan.people,
+        logos: [...new Map(plan.components.filter(component => module.components.includes(component.id)).flatMap(componentIcons).filter(icon => icon.brand).map(icon => [icon.src, icon])).values()].slice(0, 6),
+      },
+      ariaLabel: `${module.id} ${module.name}${relation ? ` · ${relation}` : ''}`,
+    }
+  }), [visible, plan.people, plan.components, selected, sizes, layout, neighborhood])
   const edges = availableEdges.filter(edge => !focusOnly || edge.source === selected || edge.target === selected)
     .map<DependencyEdge>(edge => {
       const direction = edge.target === selected ? 'upstream' : edge.source === selected ? 'downstream' : 'other'
@@ -96,7 +110,7 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
         ...edge, type: 'dependency', selected: edge.id === selectedEdge,
         data: { points: layout?.routes[edge.id] },
         className: `dependency-${direction}`,
-        style: { stroke: color, strokeWidth: direction === 'other' ? 1.4 : 2.5 },
+        style: { stroke: color, strokeWidth: direction === 'other' ? 1.4 : 2.5, opacity: neighborhood.active && direction === 'other' ? 0.3 : 1 },
         markerEnd: { type: MarkerType.ArrowClosed, color },
       }
     })
@@ -106,10 +120,8 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
         <button type="button" onClick={() => setLayoutAttempt(value => value + 1)} disabled={layoutPending}>重新布局</button>
         <label className="check"><input type="checkbox" checked={!focusOnly} onChange={event => setFocusOnly(!event.target.checked)} />全部连线</label>
         <output aria-label="显示的依赖数">{edges.length}/{availableEdges.length}</output>
-        <div className="canvas-layer-legend" role="group" aria-label="架构层颜色图例">{Object.entries(layers).map(([id, name]) => <span className={`layer-key layer-${id}`} key={id}>{name}</span>)}</div>
-      </div>
-      <div className="canvas-toolbar-row">
         <div className="edge-legend" aria-label="相对选中模块的连线方向"><span className="legend-upstream">上游 → 当前</span><span className="legend-downstream">当前 → 下游</span><span>其他依赖</span></div>
+        <div className="canvas-layer-legend" role="group" aria-label="架构层颜色图例">{Object.entries(layers).map(([id, name]) => <span className={`layer-key layer-${id}`} key={id}>{name}</span>)}</div>
         {layoutPending && <span role="status">正在自动布局…</span>}
       </div>
     </div>
