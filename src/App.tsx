@@ -63,7 +63,7 @@ function ComponentEditor({ component, plan, onApply, onTeam, onModule }: { compo
   </form>
 }
 
-function OwnerEditor({ module, plan, onApply, onTeam }: { module: Module; plan: Plan; onApply: (plan: Plan) => void; onTeam: () => void }) {
+function OwnerEditor({ module, plan, onApply, onTeam, onModule }: { module: Module; plan: Plan; onApply: (plan: Plan) => void; onTeam: () => void; onModule: (id: string) => void }) {
   const [name, setName] = useState(module.name)
   const [summary, setSummary] = useState(module.summary)
   const [detail, setDetail] = useState(module.detail)
@@ -73,6 +73,8 @@ function OwnerEditor({ module, plan, onApply, onTeam }: { module: Module; plan: 
   const [references, setReferences] = useState(module.components)
   const [mappingOpen, setMappingOpen] = useState(false)
   const [error, setError] = useState('')
+  const upstream = plan.modules.filter(item => plan.relationships.some(edge => edge.source === item.id && edge.target === module.id))
+  const downstream = plan.modules.filter(item => plan.relationships.some(edge => edge.source === module.id && edge.target === item.id))
   function apply(event: FormEvent) {
     event.preventDefault()
     try {
@@ -96,6 +98,11 @@ function OwnerEditor({ module, plan, onApply, onTeam }: { module: Module; plan: 
     }}>{Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
     <ImplementationContext moduleId={module.id} />
     <OwnerFields plan={plan} primary={primary} secondary={secondary} onPrimary={setPrimary} onSecondary={setSecondary} onTeam={onTeam} />
+    <section className="mapping" aria-label="模块依赖">
+      {([['上游', upstream], ['下游', downstream]] as const).map(([direction, modules]) => <div key={direction}>
+        <h3>{direction}</h3><div className="related-modules">{modules.length ? modules.map(item => <button type="button" key={item.id} aria-label={`查看${direction}模块 ${item.id}`} title={item.name} onClick={() => onModule(item.id)}><Icon icon={moduleIcon(item.id)} decorative /><span className="code">{item.id}</span></button>) : <span className="muted">—</span>}</div>
+      </div>)}
+    </section>
     <section className="mapping"><div className="section-title"><h3>组件</h3><IconButton icon="plus" label="添加组件" aria-expanded={mappingOpen} onClick={() => setMappingOpen(!mappingOpen)} /></div>
       <div className="mapped-icons">{plan.components.filter(component => references.includes(component.id)).map(component => <span key={component.id} className="mapped-icon" title={`${component.name} · ${component.stack}`}>{componentIcons(component).map(icon => <Icon key={icon.src} icon={icon} />)}</span>)}</div>
       {mappingOpen && <div className="component-picker" role="group" aria-label="可选技术组件">{plan.components.map(component => <label className="component-choice" key={component.id} title={component.detail}>
@@ -286,7 +293,7 @@ function Planner({ published }: { published: Plan }) {
         </section>}
         {tab === '原始架构' && <><p className="view-hint">只读基线</p><iframe title="AI-MEM 原始架构" src={`${import.meta.env.BASE_URL}architecture.html`} /></>}
       </main>
-      {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && tab !== '项目现状' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} /></aside>}
+      {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && tab !== '项目现状' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside>}
     </div>
     <footer><p role="status">{notice}</p></footer>
   </div>

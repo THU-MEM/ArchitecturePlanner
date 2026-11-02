@@ -33,6 +33,7 @@ System UI fonts support Chinese and English. Hierarchy comes from weight and siz
 
 ## Layout
 Desktop uses navigation, workspace and inspector columns. Narrow screens stack the inspector and keep navigation compact. Diagram layouts remain user-editable.
+Dense dependency graphs focus on the selected module by default, with an explicit full-edge toggle and a visible shown/available count. Inspector links distinguish upstream providers from downstream consumers; neither navigation nor display filtering changes the planning data.
 
 ## Elevation & Depth
 Hairline borders and tonal layering lead; soft offset shadows distinguish selected graph nodes.

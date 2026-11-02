@@ -236,6 +236,85 @@ test('canvas layout, relationships and deletion persist in the exported plan', a
   await expect(page.locator('.react-flow__edge')).toHaveCount(0)
 })
 
+test('dependency connectors point from the upstream provider to the downstream module, including feedback cycles', async ({ page }) => {
+  const plan = {
+    ...seed,
+    relationships: [
+      { id: 'sso-events', source: 'M17', target: 'M11' },
+      { id: 'events-assessment', source: 'M11', target: 'M02' },
+      { id: 'assessment-events', source: 'M02', target: 'M11' },
+    ],
+  }
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  await expect(page.locator('.react-flow__edge')).toHaveCount(3)
+  for (const edge of plan.relationships) {
+    const connector = page.getByLabel(`Edge from ${edge.source} to ${edge.target}`, { exact: true })
+    await expect(connector.locator('.react-flow__edge-path')).toHaveAttribute('marker-end', /^url\(.+\)$/)
+  }
+})
+
+test('module dependency navigation distinguishes upstream and downstream without changing the plan', async ({ page }) => {
+  const plan = {
+    ...seed,
+    relationships: [
+      { id: 'sso-events', source: 'M17', target: 'M11' },
+      { id: 'events-assessment', source: 'M11', target: 'M02' },
+      { id: 'assessment-events', source: 'M02', target: 'M11' },
+    ],
+  }
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  await page.getByRole('button', { name: '分工清单', exact: true }).click()
+  await page.getByRole('button', { name: 'M11 学习数据与事件', exact: true }).click()
+  const dependencies = page.getByRole('region', { name: '模块依赖', exact: true })
+  await expect(dependencies.getByRole('button', { name: '查看上游模块 M17', exact: true })).toBeVisible()
+  await expect(dependencies.getByRole('button', { name: '查看上游模块 M02', exact: true })).toBeVisible()
+  await expect(dependencies.getByRole('button', { name: '查看下游模块 M02', exact: true })).toBeVisible()
+  await expect(dependencies.getByRole('button')).toHaveCount(3)
+  await page.getByLabel('Owner 筛选').selectOption('unassigned')
+  await dependencies.getByRole('button', { name: '查看上游模块 M17', exact: true }).click()
+  await expect(page.getByLabel('模块名称')).toHaveValue('用户与身份服务')
+  await expect(page.getByLabel('Owner 筛选')).toHaveValue('')
+  await expect(dependencies.getByRole('button', { name: '查看下游模块 M11', exact: true })).toBeVisible()
+  await dependencies.getByRole('button', { name: '查看下游模块 M11', exact: true }).click()
+  await expect(page.getByLabel('模块名称')).toHaveValue('学习数据与事件')
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+})
+
+test('dense dependency plans focus on the selected module without dropping edges from the exported JSON', async ({ page }) => {
+  const relationships = Array.from({ length: 15 }, (_, index) => ({
+    id: `dependency-${index}`, source: `M${String(index + 1).padStart(2, '0')}`, target: `M${String(index + 2).padStart(2, '0')}`,
+  }))
+  const plan = { ...seed, relationships }
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  await expect(page.locator('.react-flow__node')).toHaveCount(24)
+  await expect(page.locator('.react-flow__edge')).toHaveCount(1)
+  await expect(page.getByLabel('显示的依赖数', { exact: true })).toHaveText('1/15')
+  const allEdges = page.getByRole('checkbox', { name: '全部连线', exact: true })
+  expect(await page.evaluate(() => {
+    const toolbar = document.querySelector('.canvas-toolbar')!.getBoundingClientRect()
+    return [...document.querySelectorAll('.planner-node')].every(node => {
+      const box = node.getBoundingClientRect()
+      return box.right <= toolbar.left || box.left >= toolbar.right || box.bottom <= toolbar.top || box.top >= toolbar.bottom
+    })
+  })).toBe(true)
+  await allEdges.check()
+  await expect(page.locator('.react-flow__edge')).toHaveCount(15)
+  await allEdges.uncheck()
+  await page.locator('.react-flow__node[data-id="M02"]').click()
+  await expect(page.locator('.react-flow__edge')).toHaveCount(2)
+  await expect(page.getByLabel('显示的依赖数', { exact: true })).toHaveText('2/15')
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: '导出规划', exact: true }).click()
+  const stream = await (await pending).createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream!) chunks.push(chunk)
+  expect(JSON.parse(Buffer.concat(chunks).toString('utf8')).relationships).toEqual(relationships)
+})
+
 test('valid imports require explicit replacement of an edited draft', async ({ page }) => {
   await page.goto('./')
   await page.getByLabel('模块名称').fill('Local draft')

@@ -1,11 +1,72 @@
 {
   "schemaVersion": 1,
   "name": "AI-MEM 架构分工规划",
-  "people": [],
+  "people": [
+    {
+      "id": "github-306946870",
+      "name": "dongaishi0927"
+    },
+    {
+      "id": "github-304831598",
+      "name": "dushx666"
+    },
+    {
+      "id": "github-112791499",
+      "name": "huanghanyu-vungle"
+    },
+    {
+      "id": "github-8344245",
+      "name": "hydraxman"
+    },
+    {
+      "id": "github-44543980",
+      "name": "liruilingup"
+    },
+    {
+      "id": "github-6746342",
+      "name": "liweican1992"
+    },
+    {
+      "id": "github-15085946",
+      "name": "shaoshuaig"
+    },
+    {
+      "id": "github-34643104",
+      "name": "Z-yq"
+    },
+    {
+      "id": "github-70495140",
+      "name": "ZSZ666666"
+    },
+    {
+      "id": "github-304438775",
+      "name": "Lucia9988"
+    },
+    {
+      "id": "github-305746915",
+      "name": "zhangsan649"
+    },
+    {
+      "id": "github-13994643",
+      "name": "sallelujah"
+    },
+    {
+      "id": "github-332929791",
+      "name": "Shijl-77"
+    },
+    {
+      "id": "github-315797214",
+      "name": "HMY-ABC"
+    },
+    {
+      "id": "github-6256759",
+      "name": "RohnLiu"
+    }
+  ],
   "modules": [
     {
       "id": "M05",
-      "name": "多模态学习呈现",
+      "name": "学的多元表现层",
       "summary": "文档、卡片、视频与交互式学习。",
       "detail": "面向学习者呈现多种学习形态，把知识点、学习活动和进度连接起来，形成统一的学习工作台体验。",
       "layer": "frontend",
@@ -17,7 +78,12 @@
         "object-store",
         "event-ingest"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-6746342",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 0,
@@ -26,7 +92,7 @@
     },
     {
       "id": "M06",
-      "name": "AI 学伴与 Agent",
+      "name": "AI 伴学智能搭子",
       "summary": "客户端 Agent loop 与持续陪伴。",
       "detail": "前端交互式 Agent 围绕学习目标组织对话、上下文和工具使用；通过后端能力接口获取模型、知识、记忆与业务服务。",
       "layer": "frontend",
@@ -43,7 +109,12 @@
         "tool-registry",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-8344245",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 290,
@@ -52,7 +123,7 @@
     },
     {
       "id": "M09",
-      "name": "正向反馈与成长档案",
+      "name": "能力解锁树与自适应反馈",
       "summary": "呈现掌握情况、成长和优化方向。",
       "detail": "把学习反馈、能力变化和后续建议转为积极、清晰的成长体验，帮助学习者持续完善自己的项目与能力。",
       "layer": "frontend",
@@ -63,7 +134,12 @@
         "event-ingest",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-304438775",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 580,
@@ -72,7 +148,7 @@
     },
     {
       "id": "M13",
-      "name": "教师与管理工作台",
+      "name": "控制台与多角色权限",
       "summary": "教学配置、内容审核与运营管理。",
       "detail": "为教师和管理者提供课程组织、内容审核、角色管理和运营工作空间，连接各业务服务的管理能力。",
       "layer": "frontend",
@@ -86,7 +162,12 @@
         "content-service",
         "course-service"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-34643104",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 870,
@@ -95,7 +176,7 @@
     },
     {
       "id": "M01",
-      "name": "项目输入与目标建模",
+      "name": "真实场景立项引擎",
       "summary": "把真实项目转为学习目标和能力需求。",
       "detail": "组织项目背景、目标、环境和关键问题，形成后续测评、路径与实践共同使用的项目上下文。",
       "layer": "learning",
@@ -107,7 +188,12 @@
         "model-gateway",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-304438775",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 0,
@@ -116,7 +202,7 @@
     },
     {
       "id": "M02",
-      "name": "自适应测评",
+      "name": "多邻国式定级测评",
       "summary": "识别学习基础，建立能力画像。",
       "detail": "通过动态测评识别已有基础、知识掌握和能力水平，为学习起点、内容选择与后续调整提供依据。",
       "layer": "learning",
@@ -127,7 +213,12 @@
         "model-gateway",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-112791499",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 290,
@@ -136,7 +227,7 @@
     },
     {
       "id": "M03",
-      "name": "学习路径规划",
+      "name": "动态知识图谱引擎（核心）",
       "summary": "连接项目目标、知识点和学习顺序。",
       "detail": "结合项目目标、能力画像与知识依赖形成学习路径，并随着学习证据和项目变化持续调整。",
       "layer": "learning",
@@ -150,7 +241,12 @@
         "model-gateway",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-13994643",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 580,
@@ -159,7 +255,7 @@
     },
     {
       "id": "M04",
-      "name": "知识内容生成",
+      "name": "知识点内容生成与治理",
       "summary": "围绕知识点组织多形态学习内容。",
       "detail": "把知识和教学设计转为文档、卡片、视频等内容形态，连接内容生产、审核和发布。",
       "layer": "learning",
@@ -174,7 +270,12 @@
         "redis-stream",
         "object-store"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-70495140",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 870,
@@ -183,7 +284,7 @@
     },
     {
       "id": "M07",
-      "name": "开放问题与协作实践",
+      "name": "练的双轨制（基础轨+升华轨）",
       "summary": "真实问题、专家连接与同伴协作。",
       "detail": "把基础训练和开放实践连接起来，组织真实问题、专家匹配、同伴协作与知识反馈，支持多种实践场景。",
       "layer": "learning",
@@ -196,7 +297,12 @@
         "object-store",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-305746915",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 0,
@@ -205,7 +311,7 @@
     },
     {
       "id": "M08",
-      "name": "过程评估与答辩",
+      "name": "评估与防 AI 代劳机制",
       "summary": "通过过程、作品与答辩观察能力。",
       "detail": "综合学习过程、项目产出、工具使用和答辩表现形成评估证据，识别学习者的理解、迁移与独立解决问题能力。",
       "layer": "learning",
@@ -226,7 +332,7 @@
     },
     {
       "id": "M10",
-      "name": "成果输出与展示",
+      "name": "终极升华与成果产出",
       "summary": "沉淀项目方案、作品与个人反思。",
       "detail": "围绕项目生成和整理成果、实践指南、反思记录与展示材料，把学习过程连接到可表达、可交流的产出。",
       "layer": "learning",
@@ -239,7 +345,12 @@
         "object-store",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-15085946",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 580,
@@ -248,7 +359,7 @@
     },
     {
       "id": "M22",
-      "name": "拼学分与课程组合",
+      "name": "拼学分",
       "summary": "组合学习模块，连接课程与学分。",
       "detail": "围绕课程目标组合学习模块、学习安排与评估方式，把个人学习成果连接到课程组织和学分认定。",
       "layer": "learning",
@@ -259,7 +370,12 @@
         "user-service",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-306946870",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 870,
@@ -268,7 +384,7 @@
     },
     {
       "id": "M14",
-      "name": "知识加工流水线",
+      "name": "多源知识萃取管道",
       "summary": "解析、提取、关联与知识入库。",
       "detail": "把采集资料转为可用知识，串联文档解析、知识提取、规范化、关系构建和质量检查。",
       "layer": "knowledge",
@@ -289,7 +405,12 @@
         "postgres",
         "object-store"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-13994643",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 0,
@@ -298,7 +419,7 @@
     },
     {
       "id": "M15",
-      "name": "知识图谱与知识点",
+      "name": "学科本体与知识库治理",
       "summary": "统一知识表达、关系与教学语义。",
       "detail": "管理知识点、分类、依赖和关联关系，为路径规划、内容生成、知识检索和教学分析提供共同的知识模型。",
       "layer": "knowledge",
@@ -313,7 +434,12 @@
         "postgres",
         "evaluation-service"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-112791499",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 290,
@@ -322,7 +448,7 @@
     },
     {
       "id": "M20",
-      "name": "案例与真实问题库",
+      "name": "知识案例库系统",
       "summary": "连接真实案例、实践问题和知识点。",
       "detail": "管理结构化案例和真实问题，建立与知识点、项目实践和教学内容的关联，使案例持续进入学习过程。",
       "layer": "knowledge",
@@ -336,8 +462,13 @@
         "postgres",
         "object-store"
       ],
-      "owners": [],
-      "status": "planned",
+      "owners": [
+        {
+          "personId": "github-315797214",
+          "role": "primary"
+        }
+      ],
+      "status": "active",
       "position": {
         "x": 580,
         "y": 550
@@ -345,7 +476,7 @@
     },
     {
       "id": "M23",
-      "name": "知识采集与来源管理",
+      "name": "数据源获取与合规治理 ★难点",
       "summary": "汇集资料来源，持续补充知识供给。",
       "detail": "组织知识来源、授权资料和采集入口，形成可管理的资料集合，并根据教学需求持续补充知识供给。",
       "layer": "knowledge",
@@ -361,7 +492,12 @@
         "object-store",
         "postgres"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-6256759",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 870,
@@ -370,7 +506,7 @@
     },
     {
       "id": "M11",
-      "name": "学习数据与事件",
+      "name": "数据与埋点中台",
       "summary": "连接行为、业务事件与学习证据。",
       "detail": "提供统一的学习事件采集和数据流转能力，支持进度、评估、运营分析和业务反馈。",
       "layer": "platform",
@@ -381,7 +517,12 @@
         "clickhouse",
         "observability"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-34643104",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 0,
@@ -390,7 +531,7 @@
     },
     {
       "id": "M12",
-      "name": "评测与质量保障",
+      "name": "评测集与基线守护",
       "summary": "评估路径、内容与 Agent 的效果。",
       "detail": "通过场景回放、效果评测和质量分析，持续观察内容、模型与业务流程的表现，支持版本演进。",
       "layer": "platform",
@@ -412,7 +553,7 @@
     },
     {
       "id": "M16",
-      "name": "模型与提示词平台",
+      "name": "模型服务与 Prompt 编排层",
       "summary": "模型接入、路由与提示词管理。",
       "detail": "以统一能力接口连接不同模型，组织提示词与模型版本，为 Agent、内容生产和知识加工提供模型服务。",
       "layer": "platform",
@@ -424,7 +565,12 @@
         "external-model",
         "evaluation-service"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-15085946",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 580,
@@ -433,7 +579,7 @@
     },
     {
       "id": "M17",
-      "name": "用户与身份服务",
+      "name": "统一身份认证与账号体系（SSO）",
       "summary": "学习者、教师与管理者的身份入口。",
       "detail": "统一用户身份、账户和角色上下文，为各端登录及后端资源访问提供共同的身份能力。",
       "layer": "platform",
@@ -445,8 +591,13 @@
         "access-policy",
         "postgres"
       ],
-      "owners": [],
-      "status": "planned",
+      "owners": [
+        {
+          "personId": "github-34643104",
+          "role": "primary"
+        }
+      ],
+      "status": "active",
       "position": {
         "x": 870,
         "y": 740
@@ -454,7 +605,7 @@
     },
     {
       "id": "M18",
-      "name": "语音与媒体服务",
+      "name": "语音与多模态合成服务（TTS）",
       "summary": "声音、字幕和媒体处理能力。",
       "detail": "组织语音合成、音色、字幕及相关媒体处理，为学习呈现、学伴互动和内容生产提供媒体能力。",
       "layer": "platform",
@@ -467,8 +618,13 @@
         "object-store",
         "external-model"
       ],
-      "owners": [],
-      "status": "planned",
+      "owners": [
+        {
+          "personId": "github-6746342",
+          "role": "primary"
+        }
+      ],
+      "status": "active",
       "position": {
         "x": 0,
         "y": 910
@@ -476,7 +632,7 @@
     },
     {
       "id": "M19",
-      "name": "算力与任务调度",
+      "name": "算力聚合与推理调度平台",
       "summary": "连接云端、本地与合作方计算资源。",
       "detail": "组织计算资源、任务队列和执行调度，支持知识加工、媒体生成和批量评测等后台任务。",
       "layer": "platform",
@@ -489,8 +645,13 @@
         "usage-service",
         "observability"
       ],
-      "owners": [],
-      "status": "planned",
+      "owners": [
+        {
+          "personId": "github-8344245",
+          "role": "primary"
+        }
+      ],
+      "status": "active",
       "position": {
         "x": 290,
         "y": 910
@@ -498,7 +659,7 @@
     },
     {
       "id": "M21",
-      "name": "关键风险与验收",
+      "name": "设计批判性审视与风险台账",
       "summary": "贯穿业务效果、体验和质量管理。",
       "detail": "围绕关键风险组织评估、验证和验收，与各业务模块和平台能力共同形成质量管理闭环。",
       "layer": "governance",
@@ -508,8 +669,13 @@
         "observability",
         "backup-service"
       ],
-      "owners": [],
-      "status": "planned",
+      "owners": [
+        {
+          "personId": "github-8344245",
+          "role": "primary"
+        }
+      ],
+      "status": "active",
       "position": {
         "x": 0,
         "y": 1100
@@ -517,7 +683,7 @@
     },
     {
       "id": "M24",
-      "name": "项目管理与协同",
+      "name": "项目统筹与交付管理（PMO）",
       "summary": "统筹依赖、进度、联调与交付。",
       "detail": "围绕整体目标协调模块依赖、阶段任务、问题处理和集成交付，推动各团队与模块协同。",
       "layer": "governance",
@@ -527,7 +693,12 @@
         "evaluation-service",
         "backup-service"
       ],
-      "owners": [],
+      "owners": [
+        {
+          "personId": "github-304831598",
+          "role": "primary"
+        }
+      ],
       "status": "planned",
       "position": {
         "x": 290,
@@ -927,5 +1098,361 @@
       "stack": "Database / Graph Backup · Object Lifecycle"
     }
   ],
-  "relationships": []
+  "relationships": [
+    {
+      "id": "dependency-M17-M11",
+      "source": "M17",
+      "target": "M11"
+    },
+    {
+      "id": "dependency-M19-M16",
+      "source": "M19",
+      "target": "M16"
+    },
+    {
+      "id": "dependency-M19-M18",
+      "source": "M19",
+      "target": "M18"
+    },
+    {
+      "id": "dependency-M16-M12",
+      "source": "M16",
+      "target": "M12"
+    },
+    {
+      "id": "dependency-M17-M13",
+      "source": "M17",
+      "target": "M13"
+    },
+    {
+      "id": "dependency-M23-M14",
+      "source": "M23",
+      "target": "M14"
+    },
+    {
+      "id": "dependency-M20-M14",
+      "source": "M20",
+      "target": "M14"
+    },
+    {
+      "id": "dependency-M15-M14",
+      "source": "M15",
+      "target": "M14"
+    },
+    {
+      "id": "dependency-M19-M14",
+      "source": "M19",
+      "target": "M14"
+    },
+    {
+      "id": "dependency-M16-M14",
+      "source": "M16",
+      "target": "M14"
+    },
+    {
+      "id": "dependency-M11-M14",
+      "source": "M11",
+      "target": "M14"
+    },
+    {
+      "id": "dependency-M13-M14",
+      "source": "M13",
+      "target": "M14"
+    },
+    {
+      "id": "dependency-M14-M15",
+      "source": "M14",
+      "target": "M15"
+    },
+    {
+      "id": "dependency-M13-M15",
+      "source": "M13",
+      "target": "M15"
+    },
+    {
+      "id": "dependency-M17-M20",
+      "source": "M17",
+      "target": "M20"
+    },
+    {
+      "id": "dependency-M14-M20",
+      "source": "M14",
+      "target": "M20"
+    },
+    {
+      "id": "dependency-M17-M02",
+      "source": "M17",
+      "target": "M02"
+    },
+    {
+      "id": "dependency-M01-M02",
+      "source": "M01",
+      "target": "M02"
+    },
+    {
+      "id": "dependency-M15-M02",
+      "source": "M15",
+      "target": "M02"
+    },
+    {
+      "id": "dependency-M11-M02",
+      "source": "M11",
+      "target": "M02"
+    },
+    {
+      "id": "dependency-M01-M03",
+      "source": "M01",
+      "target": "M03"
+    },
+    {
+      "id": "dependency-M02-M03",
+      "source": "M02",
+      "target": "M03"
+    },
+    {
+      "id": "dependency-M14-M03",
+      "source": "M14",
+      "target": "M03"
+    },
+    {
+      "id": "dependency-M15-M03",
+      "source": "M15",
+      "target": "M03"
+    },
+    {
+      "id": "dependency-M16-M03",
+      "source": "M16",
+      "target": "M03"
+    },
+    {
+      "id": "dependency-M19-M03",
+      "source": "M19",
+      "target": "M03"
+    },
+    {
+      "id": "dependency-M15-M04",
+      "source": "M15",
+      "target": "M04"
+    },
+    {
+      "id": "dependency-M14-M04",
+      "source": "M14",
+      "target": "M04"
+    },
+    {
+      "id": "dependency-M16-M04",
+      "source": "M16",
+      "target": "M04"
+    },
+    {
+      "id": "dependency-M19-M04",
+      "source": "M19",
+      "target": "M04"
+    },
+    {
+      "id": "dependency-M03-M04",
+      "source": "M03",
+      "target": "M04"
+    },
+    {
+      "id": "dependency-M04-M05",
+      "source": "M04",
+      "target": "M05"
+    },
+    {
+      "id": "dependency-M03-M05",
+      "source": "M03",
+      "target": "M05"
+    },
+    {
+      "id": "dependency-M18-M05",
+      "source": "M18",
+      "target": "M05"
+    },
+    {
+      "id": "dependency-M16-M05",
+      "source": "M16",
+      "target": "M05"
+    },
+    {
+      "id": "dependency-M19-M05",
+      "source": "M19",
+      "target": "M05"
+    },
+    {
+      "id": "dependency-M11-M05",
+      "source": "M11",
+      "target": "M05"
+    },
+    {
+      "id": "dependency-M03-M06",
+      "source": "M03",
+      "target": "M06"
+    },
+    {
+      "id": "dependency-M09-M06",
+      "source": "M09",
+      "target": "M06"
+    },
+    {
+      "id": "dependency-M11-M06",
+      "source": "M11",
+      "target": "M06"
+    },
+    {
+      "id": "dependency-M16-M06",
+      "source": "M16",
+      "target": "M06"
+    },
+    {
+      "id": "dependency-M05-M06",
+      "source": "M05",
+      "target": "M06"
+    },
+    {
+      "id": "dependency-M07-M06",
+      "source": "M07",
+      "target": "M06"
+    },
+    {
+      "id": "dependency-M18-M06",
+      "source": "M18",
+      "target": "M06"
+    },
+    {
+      "id": "dependency-M20-M07",
+      "source": "M20",
+      "target": "M07"
+    },
+    {
+      "id": "dependency-M14-M07",
+      "source": "M14",
+      "target": "M07"
+    },
+    {
+      "id": "dependency-M15-M07",
+      "source": "M15",
+      "target": "M07"
+    },
+    {
+      "id": "dependency-M03-M07",
+      "source": "M03",
+      "target": "M07"
+    },
+    {
+      "id": "dependency-M02-M07",
+      "source": "M02",
+      "target": "M07"
+    },
+    {
+      "id": "dependency-M09-M07",
+      "source": "M09",
+      "target": "M07"
+    },
+    {
+      "id": "dependency-M11-M07",
+      "source": "M11",
+      "target": "M07"
+    },
+    {
+      "id": "dependency-M16-M07",
+      "source": "M16",
+      "target": "M07"
+    },
+    {
+      "id": "dependency-M11-M08",
+      "source": "M11",
+      "target": "M08"
+    },
+    {
+      "id": "dependency-M16-M08",
+      "source": "M16",
+      "target": "M08"
+    },
+    {
+      "id": "dependency-M03-M08",
+      "source": "M03",
+      "target": "M08"
+    },
+    {
+      "id": "dependency-M07-M08",
+      "source": "M07",
+      "target": "M08"
+    },
+    {
+      "id": "dependency-M02-M08",
+      "source": "M02",
+      "target": "M08"
+    },
+    {
+      "id": "dependency-M04-M08",
+      "source": "M04",
+      "target": "M08"
+    },
+    {
+      "id": "dependency-M09-M08",
+      "source": "M09",
+      "target": "M08"
+    },
+    {
+      "id": "dependency-M08-M09",
+      "source": "M08",
+      "target": "M09"
+    },
+    {
+      "id": "dependency-M02-M09",
+      "source": "M02",
+      "target": "M09"
+    },
+    {
+      "id": "dependency-M07-M09",
+      "source": "M07",
+      "target": "M09"
+    },
+    {
+      "id": "dependency-M11-M09",
+      "source": "M11",
+      "target": "M09"
+    },
+    {
+      "id": "dependency-M03-M09",
+      "source": "M03",
+      "target": "M09"
+    },
+    {
+      "id": "dependency-M04-M09",
+      "source": "M04",
+      "target": "M09"
+    },
+    {
+      "id": "dependency-M12-M09",
+      "source": "M12",
+      "target": "M09"
+    },
+    {
+      "id": "dependency-M07-M10",
+      "source": "M07",
+      "target": "M10"
+    },
+    {
+      "id": "dependency-M08-M10",
+      "source": "M08",
+      "target": "M10"
+    },
+    {
+      "id": "dependency-M09-M10",
+      "source": "M09",
+      "target": "M10"
+    },
+    {
+      "id": "dependency-M14-M10",
+      "source": "M14",
+      "target": "M10"
+    },
+    {
+      "id": "dependency-M20-M10",
+      "source": "M20",
+      "target": "M10"
+    }
+  ]
 }

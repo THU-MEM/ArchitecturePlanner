@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Background, Controls, Handle, Position, ReactFlow, useNodesInitialized, useReactFlow } from '@xyflow/react'
+import { Background, Controls, Handle, MarkerType, Position, ReactFlow, useNodesInitialized, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { addRelationship, statuses, updateModule } from './plan.ts'
 import type { Module, Plan } from './plan.ts'
@@ -24,6 +24,7 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
   plan: Plan; visible: Module[]; selected: string; onSelect: (id: string) => void; onChange: (plan: Plan) => void
 }) {
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
+  const [showAllEdges, setShowAllEdges] = useState(false)
   const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({})
   const initialized = useNodesInitialized()
   const { fitView } = useReactFlow<PlannerNode>()
@@ -42,9 +43,11 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
     },
     ariaLabel: `${module.id} ${module.name}`,
   })), [visible, plan.people, plan.components, selected, sizes])
-  const edges = plan.relationships.filter(edge => visible.some(module => module.id === edge.source) && visible.some(module => module.id === edge.target))
-    .map(edge => ({ ...edge, selected: edge.id === selectedEdge }))
+  const availableEdges = plan.relationships.filter(edge => visible.some(module => module.id === edge.source) && visible.some(module => module.id === edge.target))
+  const edges = availableEdges.filter(edge => availableEdges.length <= 12 || showAllEdges || edge.source === selected || edge.target === selected)
+    .map(edge => ({ ...edge, selected: edge.id === selectedEdge, markerEnd: { type: MarkerType.ArrowClosed } }))
   return <div className="canvas">
+    {availableEdges.length > 12 && <div className="canvas-toolbar"><label className="check"><input type="checkbox" checked={showAllEdges} onChange={event => setShowAllEdges(event.target.checked)} />全部连线</label><output aria-label="显示的依赖数" title="当前模块相关连线 / 全部可见依赖">{edges.length}/{availableEdges.length}</output></div>}
     <ReactFlow<PlannerNode>
       nodes={nodes} edges={edges} nodeTypes={nodeTypes}
       defaultViewport={{ x: 20, y: 20, zoom: 0.8 }} minZoom={0.15} maxZoom={1.7} deleteKeyCode={['Backspace', 'Delete']}
