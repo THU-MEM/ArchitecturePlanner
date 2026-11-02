@@ -6,13 +6,13 @@ import { addPerson, assignOwners, assignComponentOwners, layers, MAX_PLAN_BYTES,
 import type { Component, Module, Plan } from './plan.ts'
 import Canvas from './Canvas.tsx'
 import CurrentArchitecture, { ImplementationContext } from './CurrentArchitecture.tsx'
-import { SubmissionError, submitPlanPullRequest } from './github.ts'
 import Icon, { IconButton } from './Icon.tsx'
 import { componentIcons, moduleIcon, uiIcon } from './icons.ts'
 import { mergeGitHubParticipants } from './participants.ts'
 import './App.css'
 
 const storageKey = 'architecture-planner.plan.v1'
+const githubEditUrl = 'https://github.com/THU-MEM/ArchitecturePlanner/edit/main/src/seed-plan.json'
 const tabs = ['项目现状', '架构画布', '分工清单', '技术组件', '团队成员', '原始架构'] as const
 type Tab = typeof tabs[number]
 const tabIcons = ['layer', 'canvas', 'list', 'technology', 'users', 'original']
@@ -145,25 +145,21 @@ function Planner({ published }: { published: Plan }) {
   const [selectedComponent, setSelectedComponent] = useState('workspace')
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState(initial.error)
-  const [notice, setNotice] = useState('已发布规划 · 修改后通过 PR 提交')
+  const [notice, setNotice] = useState('已发布规划 · 修改后到 GitHub 提交')
   const [personName, setPersonName] = useState('')
   const [submissionOpen, setSubmissionOpen] = useState(false)
-  const [description, setDescription] = useState('')
-  const [token, setToken] = useState('')
   const [busy, setBusy] = useState(false)
-  const [submitted, setSubmitted] = useState<{ plan: Plan; url: string } | null>(null)
-  const [branchUrl, setBranchUrl] = useState<string | undefined>()
+  const [copyFailed, setCopyFailed] = useState(false)
   const [pendingImport, setPendingImport] = useState<Plan | null>(null)
   const [localSaved, setLocalSaved] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const planRef = useRef(plan)
   function apply(next: Plan) {
-    planRef.current = next
     setPlan(next)
     setSavedDraft(null)
     setDirty(true)
     setError('')
-    setNotice('已应用 · 本地草稿，尚未提交 PR')
+    setCopyFailed(false)
+    setNotice('已应用 · 本地草稿，尚未提交到 GitHub')
     try {
       localStorage.setItem(storageKey, JSON.stringify(next))
       setLocalSaved(true)
@@ -222,20 +218,17 @@ function Planner({ published }: { published: Plan }) {
       setError(`导入失败，现有规划未修改：${error instanceof Error ? error.message : String(error)}`)
     }
   }
-  async function submit(event: FormEvent) {
-    event.preventDefault()
+  async function copyAndEdit() {
     setBusy(true)
     setError('')
-    setBranchUrl(undefined)
-    const snapshot = planRef.current
     try {
-      const url = await submitPlanPullRequest(snapshot, token, description)
-      setSubmitted({ plan: snapshot, url })
-      setToken('')
-      setNotice(planRef.current === snapshot ? 'PR 已创建 · 审核合入后发布' : '提交时的草稿已创建 PR · 合入后发布；后续修改尚未提交')
+      if (!navigator.clipboard?.writeText) throw new Error('浏览器不支持剪贴板写入')
+      await navigator.clipboard.writeText(`${JSON.stringify(validatePlan(plan), null, 2)}\n`)
+      setNotice('JSON 已复制 · 请在 GitHub 全选粘贴后提交')
+      window.location.assign(githubEditUrl)
     } catch (error) {
-      setError(error instanceof Error ? error.message : String(error))
-      if (error instanceof SubmissionError) setBranchUrl(error.branchUrl)
+      setCopyFailed(true)
+      setError(`复制失败：${error instanceof Error ? error.message : String(error)}。请手动复制下方 JSON 或导出文件，再前往 GitHub 编辑。`)
     } finally {
       setBusy(false)
     }
@@ -246,7 +239,7 @@ function Planner({ published }: { published: Plan }) {
       <div className="wordmark"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 4h9v9H4zm15 0h9v9h-9zM4 19h9v9H4zm15 0h9v9h-9z" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M13 8h6M8 13v6m16-6v6m-11 5h6" fill="none" stroke="currentColor" strokeWidth="2" /></svg><span>ArchitecturePlanner</span></div>
       <div className="header-actions">
         <IconButton icon="upload" label="导入规划" onClick={() => fileRef.current?.click()} /><IconButton icon="download" label="导出规划" onClick={exportPlan} />
-        <IconButton icon="submit" label="提交 PR" className="primary" disabled={busy} onClick={() => { setSubmissionOpen(!submissionOpen); setToken('') }} aria-expanded={submissionOpen} />
+        <IconButton icon="submit" label="提交到 GitHub" className="primary" disabled={busy} onClick={() => setSubmissionOpen(!submissionOpen)} aria-expanded={submissionOpen} />
         <a className="icon-button" href="https://github.com/THU-MEM/ArchitecturePlanner" target="_blank" rel="noreferrer" aria-label="GitHub" title="GitHub"><Icon icon={uiIcon('github')} decorative /></a>
       </div>
       <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={event => {
@@ -255,15 +248,14 @@ function Planner({ published }: { published: Plan }) {
         event.target.value = ''
       }} />
     </header>
-    {submissionOpen && <form className="submission-panel" aria-label="提交规划 PR" onSubmit={submit}>
-      <div className="submission-identity"><Icon icon={uiIcon('github')} /><div><h2>提交 PR</h2><p>审核合入后发布。Token 仅留本页。</p></div></div>
-      <label>修改说明<input disabled={busy} value={description} onChange={event => setDescription(event.target.value)} maxLength={120} placeholder="调整模块分工" required /></label>
-      <label>GitHub Token<input type="password" disabled={busy} autoComplete="off" spellCheck={false} value={token} onChange={event => setToken(event.target.value)} maxLength={512} required /></label>
-      <div className="actions"><button type="submit" className="primary" disabled={busy || !dirty || !token.trim() || !description.trim() || submitted?.plan === plan}><Icon icon={uiIcon('submit')} decorative />{busy ? '正在提交…' : '创建 Pull Request'}</button>{submitted && <a href={submitted.url} target="_blank" rel="noreferrer">查看 PR</a>}</div>
-      <details className="submission-help"><summary>GitHub 授权与公开范围</summary><p>需要本仓库写权限。<a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">创建细粒度 Token</a>，仅选择 ArchitecturePlanner，授予 Contents、Pull requests 读写权限；组织可能要求审批。Token 不能限制到单个文件。提交的规划、参与者昵称和分工将进入公开仓库，不要填写凭证或其他个人资料。</p></details>
-    </form>}
+    {submissionOpen && <section className="submission-panel" aria-label="提交规划到 GitHub">
+      <div className="submission-identity"><Icon icon={uiIcon('github')} /><div><h2>提交到 GitHub</h2><p>复制 JSON → 全选粘贴 → Commit / PR</p></div></div>
+      <div className="actions"><button type="button" className="primary" disabled={busy || !dirty} onClick={() => void copyAndEdit()}><Icon icon={uiIcon('submit')} decorative />{busy ? '正在复制…' : '复制并前往 GitHub'}</button></div>
+      <p className="submission-help">在 GitHub 登录后替换文件内容，直接 Commit 或新建分支提 PR；进入主分支后自动发布。规划及分工会进入公开仓库。</p>
+      {copyFailed && <div className="copy-fallback"><label htmlFor="copy-plan">手动复制 JSON</label><textarea id="copy-plan" readOnly rows={6} value={`${JSON.stringify(plan, null, 2)}\n`} onFocus={event => event.currentTarget.select()} /><a href={githubEditUrl} rel="noreferrer">前往 GitHub 编辑</a></div>}
+    </section>}
     {savedDraft && <section className="draft-panel"><p>有一份本地草稿，当前展示已发布规划。</p><button onClick={() => apply(savedDraft)}>恢复本地草稿</button></section>}
-    {error && <div className="message error" role="alert"><div>{error}{branchUrl && <p><a href={branchUrl} target="_blank" rel="noreferrer">检查分支 / 手动创建 PR</a></p>}</div><button aria-label="关闭错误提示" onClick={() => setError('')}>关闭</button></div>}
+    {error && <div className="message error" role="alert"><div>{error}</div><button aria-label="关闭错误提示" onClick={() => setError('')}>关闭</button></div>}
     {pendingImport && <section className="replace-panel"><p>将替换当前草稿。尚未导出的修改可能丢失，请先备份。</p><button onClick={exportPlan}>先导出当前规划</button><button className="primary" onClick={() => {
       apply(pendingImport)
       setSelected(pendingImport.modules[0]?.id ?? '')

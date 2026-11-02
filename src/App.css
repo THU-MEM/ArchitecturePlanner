@@ -156,15 +156,15 @@ td small { display: block; max-width: 300px; color: var(--muted); font-size: 11p
 .empty { padding: 45px 23px; font-size: 14px; color: var(--muted); }
 .workspace.original { grid-column: 2 / -1; }
 iframe { width: 100%; height: 1100px; display: block; border: 0; }
-.submission-panel { background: #e0edf0; padding: 23px 30px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; border-bottom: 1px solid #b5cfd7; }
+.submission-panel { background: #e0edf0; padding: 23px 30px; display: grid; grid-template-columns: 1fr auto; gap: 16px; border-bottom: 1px solid #b5cfd7; }
 .submission-panel h2 { margin-bottom: 7px; }
 .submission-identity { display: flex; align-items: center; gap: 13px; }
 .submission-identity > .icon { width: 44px; height: 44px; }
 .submission-panel p { color: #385e6f; font-size: 12px; }
-.submission-panel .actions { display: flex; gap: 12px; align-items: center; grid-column: 2 / -1; }
+.submission-panel .actions { display: flex; gap: 12px; align-items: center; }
 .submission-panel .actions button { display: inline-flex; gap: 8px; align-items: center; }
 .submission-help { grid-column: 1 / -1; font-size: 12px; max-width: 80ch; }
-.submission-help p { margin-top: 10px; }
+.copy-fallback { grid-column: 1 / -1; min-width: 0; display: grid; gap: 12px; }
 .submission-panel a, .message a { overflow-wrap: anywhere; }
 .draft-panel { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding: 16px 30px; background: #fff5dc; font-size: 13px; color: #6c5019; }
 .loading-plan { padding: 30px; display: grid; gap: 16px; justify-items: start; }
