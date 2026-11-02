@@ -16,13 +16,12 @@ Connect business modules, technology components and work assignments in one plan
 
 ## Capabilities and Constraints
 
-The user authorized the existing AI-MEM architecture document as the public content carrier.
-Preserve its views and module/component mappings; do not publish service-private source, credentials or unapproved personnel data. The user authorized displaying organization members' GitHub nicknames as planning participants. Inject that roster through deployment configuration, never commit it; preserve saved assignments and keep ownership separate from access permissions.
-Icon-first editable canvas, module/component mappings and independent primary/secondary owner assignments for both modules and technology components.
-Use original-color local SVG technology logos; keep necessary names and controls visible, with detailed prose collapsed. Support local JSON import/export.
-Reflect the current SSO snapshot and public MEM-AI implementation in a separate source-backed view, with links into assignments. Distinguish implemented code from production deployment and planned integrations; never equate OIDC identity, model API keys and balance-query service credentials. Preserve existing drafts and the original planning baseline.
-Optional Cloudflare Workers + D1 REST API for shared persistence. Protect reads and writes; never embed editor credentials in the frontend.
-GitHub Pages must be live; absent Cloudflare authorization must be clearly disclosed, not presented as a working shared service.
+Preserve the authorized original architecture as a read-only reference, separate from editable planning data.
+Use original-color local SVGs, necessary names and collapsed detail. Support editable mappings and independent primary/secondary owners for modules and technology components.
+Planning ownership is not authentication, organization membership or access permission. Publish only authorized GitHub nicknames and planning content, never private source, credentials or additional personal data.
+Keep SSO and MEM-AI source evidence separate from planning status and production-deployment claims; distinguish user identity, model keys and service credentials.
+Repository JSON is authoritative; browser edits are recoverable local drafts. Publishing uses GitHub's native editor and review, without tokens in the planner, write APIs or an external backend. Clipboard failure must leave manual copy/export available.
+See [README](README.md) for operation and publishing.
 
 ## Users
 

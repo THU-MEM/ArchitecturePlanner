@@ -2,63 +2,45 @@
 
 [在线规划台](https://thu-mem.github.io/ArchitecturePlanner/) · [React Flow](https://reactflow.dev/)
 
-以 AI-MEM 原始架构为内容基线，用 React + Vite + React Flow 编辑模块、布局、关系和分工。模块及技术组件均支持一位主 owner、多位协作 owner，组件映射可编辑。以原色 SVG 展示技术，说明按需展开。Owner 是规划信息，不是账号或权限。
+基于 AI-MEM 架构的可编辑规划台，支持模块、技术组件、依赖与分工。模块和组件各支持一位主 owner、多位协作 owner。Owner 仅是规划信息，不授予账号或权限。
 
-## 使用
+## 使用与发布
 
-选择团队成员后，可给模块或技术组件应用分工，也可手动添加参与者。修改默认只保存到当前浏览器，可通过 JSON 导入、导出备份或交接。导出文件包含参与者及分工，请谨慎分享。原始架构是只读参考，不随规划编辑反写。
+1. 页面默认展示已发布规划；如需继续浏览器中的修改，点击「恢复本地草稿」。
+2. 编辑模块或组件后「应用」，可导入、导出 JSON 备份。此时修改仍只在当前浏览器。
+3. 点击「提交到 GitHub」→「复制并前往 GitHub」，在原生编辑器全选粘贴，再 Commit 或提 PR。无需向规划台提供 Token。
+4. 变更进入主分支并通过检查后，Pages 自动发布；审核、权限与冲突处理由 GitHub 和维护者负责。
 
-经授权公开的 GitHub 昵称可通过仓库 Actions 变量 `VITE_GITHUB_PARTICIPANTS` 配置为 `[{ "id": 101, "login": "example-owner" }]`，重新部署后会直接出现在参与者及 owner 选项中，无需访问者登录 GitHub。**该变量会进入公开页面，不是秘密存储**；不要填写 token、邮箱、真实姓名或未获公开授权的名单。源码与种子文件不保存实际名单。现有草稿、导入文件和共享读取会合并参与者而非重置分工；相同账号重复加载不会重复添加，移出配置也不自动删除已有负责人。
+复制失败时可手动复制页面中的 JSON 或导出文件，不会自动跳转。复制和打开 GitHub 不代表已提交，返回后仍可恢复草稿。
 
-「项目现状」对照 SSO 源码快照和公开 MEM-AI 上游，展示身份、业务数据、模型转发与余额接入的实际职责和链路，并可跳转分工。实线表示已有代码，虚线表示待接入，不表示生产部署已验收。MEM-AI 与 AIMEM-LLMWiki 是不同项目；规划台自身尚未接入 SSO。现状单独维护，不自动覆盖已有草稿、开展状态或原始规划。
+**规划与分工会进入公开仓库，导出文件也包含人员信息。只填写获授权公开的昵称与规划内容，不要加入凭据、邮箱或其他个人信息。**
+
+## 数据与边界
+
+[规划 JSON](src/seed-plan.json) 是正式数据源，以[腾讯分工文档](https://docs.qq.com/sheet/DUHZXUFdHdm13VExI)的当前认领行和账号映射为人工同步依据，不自动写回。账号映射仍待确认；空白认领保持未分配，不推断协作或组件负责人。
+
+箭头表示上游 → 下游，保留依赖反馈环。模块详情支持双向跳转；密集连线默认聚焦当前模块，可切换「全部连线」，不改变导出数据。
+
+成员和分工使用 DiceBear 首字母头像，在浏览器本地生成，不向外部头像服务发送信息，也不改变规划 JSON。
+
+原始架构只读；「项目现状」单独维护 SSO 与 MEM-AI 的源码事实，不自动改变规划状态。已有代码不等于已上线，规划台本身不接入 SSO，也不依赖外部数据库或 API 服务。
+
+部署可通过 `VITE_GITHUB_PARTICIPANTS` 补充获授权公开的 GitHub 昵称，配置格式见[参与者合并逻辑](src/participants.ts)。按稳定账号 ID 合并，不重置已有分工；配置会进入公开页面，不能用于保存秘密。
+
+## 开发
+
+运行要求与命令以 [package.json](package.json) 为准。
 
 ```sh
 npm ci
 npm run dev
-```
-
-运行要求见 `package.json`。生产构建使用 GitHub Pages 项目路径；部署由 Pages 工作流完成。
-
-```sh
 npm test
 npm run lint
 npm run build
-npx wrangler d1 migrations apply DB --local
 npx playwright install chromium
 npm run test:browser
 ```
 
-## 可选共享 API
-
-GitHub Pages 本身不存储团队数据。需要跨设备协作时，可部署附带的 Cloudflare Workers + D1：只存一份规划 JSON 和递增版本，不引入账号系统或复杂业务表。
-
-```sh
-npx wrangler login
-npx wrangler d1 create architecture-planner
-```
-
-将创建结果的数据库 ID 填入 `wrangler.jsonc`，核对 `ALLOWED_ORIGIN` 为实际页面的 origin，再执行：
-
-```sh
-npx wrangler d1 migrations apply DB --remote
-npx wrangler secret put EDITOR_TOKEN
-npm run api:deploy
-```
-
-设置至少 32 个字符的高熵随机 token；不要提交 token 或将其设置成 `VITE_*` 变量。页面的「共享 API」中输入可信的 HTTPS 服务地址和 token，先读取再保存。Token 仅在页面内存中保留；共享 token 持有人具有整个规划的读写权限，需要细分权限时应另行接入身份系统。
-
-| 接口 | 契约 |
-|---|---|
-| `GET /health` | 仅服务存活状态，不含规划数据 |
-| `GET /api/plan` | Bearer 授权；返回 `{ plan, revision }` |
-| `PUT /api/plan` | Bearer 授权；提交 `{ plan, revision }`，成功返回新版本 |
-
-规划结构和限制以 `src/plan.ts` 为准。写入采用版本比较：冲突返回 `409`，不会覆盖他人修改。先导出本地草稿，再读取最新版本并手动合并。CORS 只允许配置的页面 origin，但不能替代授权；无 Origin 的授权 CLI 请求也可使用。
-
-本地 API 测试只使用本地 D1 和明确标注的测试 token，不访问生产数据。API 未配置或不可用时，页面仍可使用本地规划模式。
-
 ## 来源与许可
 
-`public/architecture.html` 是经授权发布的 AI-MEM 原始架构内容，技术选型是候选规划，不代表已经部署；其图标及第三方来源声明完整保留。`src/seed-plan.json` 由该文档的模块、组件和映射投影生成，初始人员及关系为空。
-
-新工具代码采用 MIT 许可；第三方依赖及图标仍适用各自许可与声明。新增 SVG 的来源和许可见 [图标声明](public/THIRD-PARTY-NOTICES.txt)。Logo 依据组件的技术信息显示，不代表已部署或品牌背书。
+原始架构经授权发布，技术选型仍为候选规划。工具代码采用 MIT 许可；依赖及图标适用各自许可，见[图标声明](public/THIRD-PARTY-NOTICES.txt)。Logo 不代表已部署或品牌背书。

@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test'
-import seed from '../src/seed-plan.json' with { type: 'json' }
+import seed from './fixture.ts'
 import { mkdir } from 'node:fs/promises'
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: seed }))
+})
 
 test('configured GitHub participants are immediately available and can own modules and components', async ({ page }) => {
   await page.goto('./')
@@ -29,6 +33,7 @@ test('configured GitHub participants are immediately available and can own modul
   await page.getByLabel('主 owner').selectOption({ label: 'example-helper' })
   await page.getByRole('button', { name: '应用修改', exact: true }).click()
   await page.reload()
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('architecture-planner.plan.v1')!))
   expect(saved.modules.find((module: { id: string }) => module.id === 'M02').owners).toEqual([{ personId: 'github-101', role: 'primary' }, { personId: 'github-202', role: 'secondary' }])
   expect(saved.components.find((component: { id: string }) => component.id === 'postgres').owners).toEqual([{ personId: 'github-202', role: 'primary' }])
@@ -40,12 +45,87 @@ test('configured GitHub participants are immediately available and can own modul
   await page.screenshot({ path: '.impeccable/review/team-mobile.png', fullPage: true, animations: 'disabled' })
 })
 
+test('local initials avatars identify participants and follow applied module and component ownership', async ({ page }) => {
+  const externalImages: string[] = []
+  page.on('request', request => {
+    if (request.resourceType() === 'image' && /^https?:/.test(request.url()) && new URL(request.url()).origin !== 'http://127.0.0.1:4173') externalImages.push(request.url())
+  })
+  await page.goto('./')
+  await page.getByRole('button', { name: '团队成员', exact: true }).click()
+  await expect(page.locator('.team-list img.avatar')).toHaveCount(2)
+  const ownerAvatar = page.locator('.team-list').getByRole('img', { name: 'example-owner 的头像', exact: true })
+  const helperAvatar = page.locator('.team-list').getByRole('img', { name: 'example-helper 的头像', exact: true })
+  await expect(ownerAvatar).toHaveAttribute('src', /^data:image\/svg\+xml/)
+  const ownerSource = await ownerAvatar.getAttribute('src')
+  const helperSource = await helperAvatar.getAttribute('src')
+  expect(helperSource).not.toBe(ownerSource)
+  expect(await ownerAvatar.evaluate((image: HTMLImageElement) => new DOMParser().parseFromString(decodeURIComponent(image.src.split(',')[1]), 'image/svg+xml').querySelector('text')?.textContent)).toBe('EO')
+  expect(await ownerAvatar.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBeTruthy()
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  await page.getByRole('button', { name: '架构画布', exact: true }).click()
+  const node = page.locator('.react-flow__node[data-id="M01"]')
+  await expect(node.locator('img.avatar')).toHaveCount(0)
+  await page.getByLabel('主 owner').selectOption({ label: 'example-owner' })
+  await page.getByLabel('协作 owner example-helper').check()
+  await page.getByRole('button', { name: '应用修改', exact: true }).click()
+  await expect(node.getByRole('img', { name: '主 owner example-owner 的头像', exact: true })).toHaveAttribute('src', ownerSource!)
+  await expect(node.getByRole('img', { name: '协作 owner example-helper 的头像', exact: true })).toHaveAttribute('src', helperSource!)
+  await page.getByRole('button', { name: '分工清单', exact: true }).click()
+  const row = page.getByRole('row').filter({ hasText: 'M01' })
+  await expect(row.getByRole('img', { name: '主 owner example-owner 的头像', exact: true })).toBeVisible()
+  await expect(row).toContainText('example-helper')
+  await page.getByRole('button', { name: '技术组件', exact: true }).click()
+  const component = seed.components.find(component => component.id === 'postgres')!
+  const tile = page.getByRole('button', { name: `${component.id} ${component.name}`, exact: true })
+  await tile.click()
+  await page.getByLabel('主 owner').selectOption({ label: 'example-helper' })
+  await page.getByRole('button', { name: '应用修改', exact: true }).click()
+  await expect(tile.getByRole('img', { name: '主 owner example-helper 的头像', exact: true })).toHaveAttribute('src', helperSource!)
+  await page.reload()
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
+  await expect(node.getByRole('img', { name: '主 owner example-owner 的头像', exact: true })).toHaveAttribute('src', ownerSource!)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByLabel('搜索模块').fill('M01')
+  await expect(node).toBeInViewport()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/avatars-mobile.png', fullPage: true, animations: 'disabled' })
+  await page.getByLabel('主 owner').selectOption('')
+  await page.getByLabel('协作 owner example-helper').uncheck()
+  await page.getByRole('button', { name: '应用修改', exact: true }).click()
+  await expect(node.locator('img.avatar')).toHaveCount(0)
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('architecture-planner.plan.v1')!))
+  expect(saved.modules.find((module: { id: string }) => module.id === 'M01').owners).toEqual([])
+  expect(saved.people).toEqual([{ id: 'github-101', name: 'example-owner' }, { id: 'github-202', name: 'example-helper' }])
+  expect(externalImages).toEqual([])
+})
+
+test('all assigned avatars fit a module even when its technology logos fill the footer', async ({ page }) => {
+  const plan = structuredClone(seed)
+  plan.people = Array.from({ length: 32 }, (_, index) => ({ id: `owner-${index}`, name: `Owner ${index}` }))
+  const module = plan.modules.find(module => module.id === 'M01')!
+  module.components = plan.components.map(component => component.id)
+  module.owners = plan.people.map((person, index) => ({ personId: person.id, role: index ? 'secondary' : 'primary' }))
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  const node = page.locator('.react-flow__node[data-id="M01"]')
+  await expect(node.locator('img.avatar')).toHaveCount(32)
+  expect(await node.evaluate(element => {
+    const box = element.getBoundingClientRect()
+    return [...element.querySelectorAll('img.avatar')].every(image => {
+      const avatar = image.getBoundingClientRect()
+      return avatar.width > 0 && avatar.left >= box.left && avatar.right <= box.right && avatar.top >= box.top && avatar.bottom <= box.bottom
+    })
+  })).toBeTruthy()
+})
+
 test('current architecture distinguishes implemented identity and balance flows from planned client integration', async ({ page }) => {
   const draft = structuredClone(seed)
   draft.people = [{ id: 'alice', name: 'Alice' }]
   draft.modules.find(module => module.id === 'M01')!.owners = [{ personId: 'alice', role: 'primary' }]
   await page.addInitScript(plan => localStorage.setItem('architecture-planner.plan.v1', JSON.stringify(plan)), draft)
   await page.goto('./')
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   await page.getByRole('button', { name: '项目现状', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'SSO · MEM-AI', exact: true })).toBeVisible()
   await expect(page.getByText('源码已实现 ≠ 生产已上线', { exact: true })).toBeVisible()
@@ -138,6 +218,7 @@ test('technology components really retain primary and secondary owners after rel
   await page.getByLabel('协作 owner Bob').check()
   await page.getByRole('button', { name: '应用修改', exact: true }).click()
   await page.reload()
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   await page.getByRole('button', { name: '技术组件', exact: true }).click()
   await page.getByRole('button', { name: `${postgres.id} ${postgres.name}`, exact: true }).click()
   await expect(page.getByLabel('主 owner').locator('option:checked')).toHaveText('Alice')
@@ -195,40 +276,9 @@ test('original modules, primary and secondary owner assignment, export and reloa
   const file = await download
   await expect(file.suggestedFilename()).toBe('architecture-plan.json')
   await page.reload()
+  await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   await page.getByRole('button', { name: '分工清单' }).click()
   await expect(page.getByRole('row').filter({ hasText: 'M01' })).toContainText('项目建模')
-})
-
-test('shared loads refresh the inspector and persist locally without storing the token', async ({ page, request }) => {
-  const headers = { Authorization: 'Bearer test-only-not-a-real-secret-1234567890' }
-  const response = await request.get('http://127.0.0.1:8787/api/plan', { headers })
-  const { revision } = await response.json()
-  const plan = structuredClone(seed)
-  const module = plan.modules.find(module => module.id === 'M01')!
-  module.name = 'Shared module'
-  plan.modules = [module, ...plan.modules.filter(module => module.id !== 'M01')]
-  expect((await request.put('http://127.0.0.1:8787/api/plan', { headers, data: { revision, plan } })).status()).toBe(200)
-  await page.goto('./')
-  await page.getByRole('button', { name: '共享 API', exact: true }).click()
-  await page.getByLabel('API 地址').fill('http://127.0.0.1:8787')
-  await page.getByLabel('编辑 token').fill('test-only-not-a-real-secret-1234567890')
-  let release!: () => void
-  const gate = new Promise<void>(resolve => { release = resolve })
-  await page.route('http://127.0.0.1:8787/api/plan', async route => {
-    if (route.request().method() === 'OPTIONS') return route.continue()
-    const response = await route.fetch()
-    await gate
-    await route.fulfill({ response })
-  })
-  await page.getByRole('button', { name: '读取共享规划' }).click()
-  await expect(page.getByLabel('API 地址')).toBeDisabled()
-  await expect(page.getByLabel('编辑 token')).toBeDisabled()
-  release()
-  await expect(page.getByLabel('模块名称')).toHaveValue('Shared module')
-  const stored = await page.evaluate(() => JSON.stringify(localStorage))
-  expect(stored).not.toContain('test-only-not-a-real-secret')
-  await page.reload()
-  await expect(page.getByLabel('模块名称')).toHaveValue('Shared module')
 })
 
 test('canvas layout, relationships and deletion persist in the exported plan', async ({ page }) => {
@@ -260,23 +310,83 @@ test('canvas layout, relationships and deletion persist in the exported plan', a
   await expect(page.locator('.react-flow__edge')).toHaveCount(0)
 })
 
-test('a shared revision conflict retains local edits and leaves the other writer intact', async ({ page, request }) => {
-  const headers = { Authorization: 'Bearer test-only-not-a-real-secret-1234567890' }
+test('dependency connectors point from the upstream provider to the downstream module, including feedback cycles', async ({ page }) => {
+  const plan = {
+    ...seed,
+    relationships: [
+      { id: 'sso-events', source: 'M17', target: 'M11' },
+      { id: 'events-assessment', source: 'M11', target: 'M02' },
+      { id: 'assessment-events', source: 'M02', target: 'M11' },
+    ],
+  }
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
   await page.goto('./')
-  await page.getByRole('button', { name: '共享 API', exact: true }).click()
-  await page.getByLabel('API 地址').fill('http://127.0.0.1:8787')
-  await page.getByLabel('编辑 token').fill('test-only-not-a-real-secret-1234567890')
-  await page.getByRole('button', { name: '读取共享规划' }).click()
-  await expect(page.getByRole('status')).toContainText('共享规划已读取')
-  await page.getByLabel('模块名称').fill('Local unsynced module')
-  await page.getByRole('button', { name: '应用修改' }).click()
-  const snapshot = await request.get('http://127.0.0.1:8787/api/plan', { headers }).then(response => response.json())
-  snapshot.plan.name = 'Other writer'
-  expect((await request.put('http://127.0.0.1:8787/api/plan', { headers, data: snapshot })).status()).toBe(200)
-  await page.getByRole('button', { name: '保存到共享库' }).click()
-  await expect(page.getByRole('alert')).toContainText('共享版本已变化')
-  await expect(page.getByLabel('模块名称')).toHaveValue('Local unsynced module')
-  expect((await request.get('http://127.0.0.1:8787/api/plan', { headers }).then(response => response.json())).plan.name).toBe('Other writer')
+  await expect(page.locator('.react-flow__edge')).toHaveCount(3)
+  for (const edge of plan.relationships) {
+    const connector = page.getByLabel(`Edge from ${edge.source} to ${edge.target}`, { exact: true })
+    await expect(connector.locator('.react-flow__edge-path')).toHaveAttribute('marker-end', /^url\(.+\)$/)
+  }
+})
+
+test('module dependency navigation distinguishes upstream and downstream without changing the plan', async ({ page }) => {
+  const plan = {
+    ...seed,
+    relationships: [
+      { id: 'sso-events', source: 'M17', target: 'M11' },
+      { id: 'events-assessment', source: 'M11', target: 'M02' },
+      { id: 'assessment-events', source: 'M02', target: 'M11' },
+    ],
+  }
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  await page.getByRole('button', { name: '分工清单', exact: true }).click()
+  await page.getByRole('button', { name: 'M11 学习数据与事件', exact: true }).click()
+  const dependencies = page.getByRole('region', { name: '模块依赖', exact: true })
+  await expect(dependencies.getByRole('button', { name: '查看上游模块 M17', exact: true })).toBeVisible()
+  await expect(dependencies.getByRole('button', { name: '查看上游模块 M02', exact: true })).toBeVisible()
+  await expect(dependencies.getByRole('button', { name: '查看下游模块 M02', exact: true })).toBeVisible()
+  await expect(dependencies.getByRole('button')).toHaveCount(3)
+  await page.getByLabel('Owner 筛选').selectOption('unassigned')
+  await dependencies.getByRole('button', { name: '查看上游模块 M17', exact: true }).click()
+  await expect(page.getByLabel('模块名称')).toHaveValue('用户与身份服务')
+  await expect(page.getByLabel('Owner 筛选')).toHaveValue('')
+  await expect(dependencies.getByRole('button', { name: '查看下游模块 M11', exact: true })).toBeVisible()
+  await dependencies.getByRole('button', { name: '查看下游模块 M11', exact: true }).click()
+  await expect(page.getByLabel('模块名称')).toHaveValue('学习数据与事件')
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+})
+
+test('dense dependency plans focus on the selected module without dropping edges from the exported JSON', async ({ page }) => {
+  const relationships = Array.from({ length: 15 }, (_, index) => ({
+    id: `dependency-${index}`, source: `M${String(index + 1).padStart(2, '0')}`, target: `M${String(index + 2).padStart(2, '0')}`,
+  }))
+  const plan = { ...seed, relationships }
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  await expect(page.locator('.react-flow__node')).toHaveCount(24)
+  await expect(page.locator('.react-flow__edge')).toHaveCount(1)
+  await expect(page.getByLabel('显示的依赖数', { exact: true })).toHaveText('1/15')
+  const allEdges = page.getByRole('checkbox', { name: '全部连线', exact: true })
+  expect(await page.evaluate(() => {
+    const toolbar = document.querySelector('.canvas-toolbar')!.getBoundingClientRect()
+    return [...document.querySelectorAll('.planner-node')].every(node => {
+      const box = node.getBoundingClientRect()
+      return box.right <= toolbar.left || box.left >= toolbar.right || box.bottom <= toolbar.top || box.top >= toolbar.bottom
+    })
+  })).toBe(true)
+  await allEdges.check()
+  await expect(page.locator('.react-flow__edge')).toHaveCount(15)
+  await allEdges.uncheck()
+  await page.locator('.react-flow__node[data-id="M02"]').click()
+  await expect(page.locator('.react-flow__edge')).toHaveCount(2)
+  await expect(page.getByLabel('显示的依赖数', { exact: true })).toHaveText('2/15')
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  const pending = page.waitForEvent('download')
+  await page.getByRole('button', { name: '导出规划', exact: true }).click()
+  const stream = await (await pending).createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream!) chunks.push(chunk)
+  expect(JSON.parse(Buffer.concat(chunks).toString('utf8')).relationships).toEqual(relationships)
 })
 
 test('valid imports require explicit replacement of an edited draft', async ({ page }) => {
