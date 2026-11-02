@@ -13,6 +13,15 @@ type SceneElement = {
 type Scene = { elements: SceneElement[]; files: Record<string, { dataURL: string; mimeType: string }> }
 const scene = (page: Page): Promise<Scene> => page.evaluate(key => JSON.parse(localStorage.getItem(key)!), drawingStorageKey)
 
+const coloredScenePixels = (page: Page) => page.locator<HTMLCanvasElement>('.drawing-stage canvas.static').evaluate(canvas => {
+  const pixels = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
+  let colored = 0
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (pixels[index + 3] && Math.max(pixels[index], pixels[index + 1], pixels[index + 2]) - Math.min(pixels[index], pixels[index + 1], pixels[index + 2]) > 50) colored++
+  }
+  return colored
+})
+
 async function openDrawing(page: Page) {
   await page.getByRole('navigation', { name: '规划视图' }).getByRole('button', { name: '架构画布', exact: true }).click()
   await expect(page.getByTestId('toolbar-rectangle')).toBeVisible({ timeout: 60_000 })
@@ -98,6 +107,7 @@ test('local SVG logos insert, drag, undo, persist and export as a nonempty PNG w
   await openDrawing(page)
   await page.getByRole('button', { name: '插入 PostgreSQL Logo', exact: true }).click()
   await expect(page.locator('.drawing-save-status')).toContainText('1 个元素')
+  await expect.poll(() => coloredScenePixels(page)).toBeGreaterThan(100)
   const first = (await scene(page)).elements[0]
   expect(first.type).toBe('image')
   expect(first.customData?.logo).toBe('PostgreSQL')
@@ -117,6 +127,7 @@ test('local SVG logos insert, drag, undo, persist and export as a nonempty PNG w
   await target.dispatchEvent('dragover', { dataTransfer: transfer })
   await target.dispatchEvent('drop', { dataTransfer: transfer, clientX: box.x + 360, clientY: box.y + 300 })
   await expect(page.locator('.drawing-save-status')).toContainText('2 个元素')
+  await expect.poll(() => coloredScenePixels(page)).toBeGreaterThan(100)
   const second = (await scene(page)).elements.find(element => element.customData?.logo === 'React')!
   expect(second.x).not.toBe(first.x)
   await page.reload()
@@ -156,6 +167,7 @@ test('local SVG logos insert, drag, undo, persist and export as a nonempty PNG w
   await page.locator('input[aria-label="导入架构画布文件"]').setInputFiles({ name: editable.filename, mimeType: 'application/json', buffer: editable.bytes })
   await page.getByRole('button', { name: '确认替换画布', exact: true }).click()
   await expect(page.locator('.drawing-save-status')).toContainText('2 个元素')
+  await expect.poll(() => coloredScenePixels(page)).toBeGreaterThan(100)
   expect((await scene(page)).elements.map(element => element.customData?.logo).sort()).toEqual(['PostgreSQL', 'React'])
   expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
 })
@@ -173,6 +185,7 @@ test('mobile canvas fills the viewport, searches and inserts logos while keeping
   await page.getByRole('button', { name: '插入 Kubernetes Logo', exact: true }).click()
   await expect(page.getByRole('complementary', { name: '技术 Logo 素材' })).toHaveCount(0)
   await expect(page.locator('.drawing-save-status')).toContainText('1 个元素')
+  await expect.poll(() => coloredScenePixels(page)).toBeGreaterThan(100)
   await expect(page.getByRole('button', { name: '导出 PNG', exact: true })).toBeEnabled()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await mkdir('.impeccable/review', { recursive: true })

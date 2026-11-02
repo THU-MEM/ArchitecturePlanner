@@ -111,8 +111,8 @@ export default function ArchitectureCanvas() {
   function replaceScene(data: RestoredScene) {
     if (!api) return
     api.resetScene()
-    if (data.files) api.addFiles(Object.values(data.files))
     api.updateScene({ elements: data.elements, appState: data.appState, captureUpdate: CaptureUpdateAction.IMMEDIATELY })
+    api.addFiles(Object.values(data.files))
     api.scrollToContent(undefined, { fitToViewport: true })
     setPendingImport(null)
   }
@@ -153,7 +153,6 @@ export default function ArchitectureCanvas() {
       const width = image.naturalWidth * scale
       const height = image.naturalHeight * scale
       const fileId = `architecture-logo-${icon.src}` as FileId
-      api.addFiles([{ id: fileId, dataURL, mimeType: 'image/svg+xml', created: Date.now() }])
       const elements = convertToExcalidrawElements([{
         type: 'image', fileId, status: 'saved', x: position.x - width / 2, y: position.y - height / 2,
         width, height, scale: [1, 1], customData: { logo: icon.label },
@@ -163,6 +162,7 @@ export default function ArchitectureCanvas() {
         appState: { selectedElementIds: Object.fromEntries(elements.map(element => [element.id, true])) },
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       })
+      api.addFiles([{ id: fileId, dataURL, mimeType: 'image/svg+xml', created: Date.now() }])
       api.setActiveTool({ type: 'selection' })
       if (window.innerWidth <= 900) setPaletteOpen(false)
     } catch (error) {
