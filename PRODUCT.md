@@ -17,7 +17,7 @@ Connect business modules, technology components and work assignments in one plan
 ## Capabilities and Constraints
 
 The user authorized the existing AI-MEM architecture document as the public content carrier.
-Preserve its views and module/component mappings; do not publish service-private source, credentials or actual personnel.
+Preserve its views and module/component mappings; do not publish service-private source, credentials or unapproved personnel data. The user authorized displaying organization members' GitHub nicknames as planning participants. Inject that roster through deployment configuration, never commit it; preserve saved assignments and keep ownership separate from access permissions.
 Icon-first editable canvas, module/component mappings and independent primary/secondary owner assignments for both modules and technology components.
 Use original-color local SVG technology logos; keep necessary names and controls visible, with detailed prose collapsed. Support local JSON import/export.
 Reflect the current SSO snapshot and public MEM-AI implementation in a separate source-backed view, with links into assignments. Distinguish implemented code from production deployment and planned integrations; never equate OIDC identity, model API keys and balance-query service credentials. Preserve existing drafts and the original planning baseline.

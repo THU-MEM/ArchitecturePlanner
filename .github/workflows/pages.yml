@@ -24,6 +24,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test && npm run lint && npm run build
+        env:
+          VITE_GITHUB_PARTICIPANTS: ${{ vars.VITE_GITHUB_PARTICIPANTS }}
       - run: npx wrangler d1 migrations apply DB --local
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser

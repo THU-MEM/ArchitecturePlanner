@@ -2,6 +2,44 @@ import { test, expect } from '@playwright/test'
 import seed from '../src/seed-plan.json' with { type: 'json' }
 import { mkdir } from 'node:fs/promises'
 
+test('configured GitHub participants are immediately available and can own modules and components', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: '团队成员', exact: true }).click()
+  await expect(page.locator('.team-list li')).toHaveCount(2)
+  await expect(page.locator('.view-heading > span')).toHaveText('2')
+  await expect(page.locator('.team-list')).toContainText('example-owner')
+  await expect(page.locator('.team-list')).toContainText('example-helper')
+  await page.getByLabel('成员姓名').fill('Existing owner')
+  await page.getByRole('button', { name: '添加成员', exact: true }).click()
+  await page.getByRole('button', { name: '分工清单', exact: true }).click()
+  await page.getByRole('button', { name: 'M01 项目输入与目标建模', exact: true }).click()
+  await page.getByLabel('主 owner').selectOption({ label: 'Existing owner' })
+  await page.getByRole('button', { name: '应用修改', exact: true }).click()
+  await page.getByRole('button', { name: '团队成员', exact: true }).click()
+  await expect(page.locator('.team-list li')).toHaveCount(3)
+  await page.getByRole('button', { name: '分工清单', exact: true }).click()
+  await expect(page.getByRole('row').filter({ hasText: 'M01' })).toContainText('Existing owner')
+  await page.getByRole('button', { name: 'M02 自适应测评', exact: true }).click()
+  await page.getByLabel('主 owner').selectOption({ label: 'example-owner' })
+  await page.getByLabel('协作 owner example-helper').check()
+  await page.getByRole('button', { name: '应用修改', exact: true }).click()
+  await page.getByRole('button', { name: '技术组件', exact: true }).click()
+  const postgres = seed.components.find(component => component.id === 'postgres')!
+  await page.getByRole('button', { name: `${postgres.id} ${postgres.name}`, exact: true }).click()
+  await page.getByLabel('主 owner').selectOption({ label: 'example-helper' })
+  await page.getByRole('button', { name: '应用修改', exact: true }).click()
+  await page.reload()
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('architecture-planner.plan.v1')!))
+  expect(saved.modules.find((module: { id: string }) => module.id === 'M02').owners).toEqual([{ personId: 'github-101', role: 'primary' }, { personId: 'github-202', role: 'secondary' }])
+  expect(saved.components.find((component: { id: string }) => component.id === 'postgres').owners).toEqual([{ personId: 'github-202', role: 'primary' }])
+  await page.getByRole('button', { name: '团队成员', exact: true }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+  await expect(page.locator('.team-list li')).toHaveCount(3)
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/team-mobile.png', fullPage: true, animations: 'disabled' })
+})
+
 test('current architecture distinguishes implemented identity and balance flows from planned client integration', async ({ page }) => {
   const draft = structuredClone(seed)
   draft.people = [{ id: 'alice', name: 'Alice' }]

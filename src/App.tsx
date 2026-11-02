@@ -9,20 +9,22 @@ import CurrentArchitecture, { ImplementationContext } from './CurrentArchitectur
 import { cloudRequest } from './cloud.ts'
 import Icon, { IconButton } from './Icon.tsx'
 import { componentIcons, moduleIcon, uiIcon } from './icons.ts'
+import { mergeGitHubParticipants } from './participants.ts'
 import './App.css'
 
 const storageKey = 'architecture-planner.plan.v1'
 const tabs = ['项目现状', '架构画布', '分工清单', '技术组件', '团队成员', '原始架构'] as const
 type Tab = typeof tabs[number]
 const tabIcons = ['layer', 'canvas', 'list', 'technology', 'users', 'original']
+const participants: unknown = JSON.parse(import.meta.env.VITE_GITHUB_PARTICIPANTS ?? '[]')
 
 function initialDraft() {
   try {
     const raw = localStorage.getItem(storageKey)
-    return { plan: raw ? validatePlan(JSON.parse(raw)) : validatePlan(seed), error: '' }
+    return { plan: mergeGitHubParticipants(raw ? validatePlan(JSON.parse(raw)) : validatePlan(seed), participants), error: '' }
   } catch (error) {
     return {
-      plan: validatePlan(seed),
+      plan: mergeGitHubParticipants(validatePlan(seed), participants),
       error: `无法读取本地草稿：${error instanceof Error ? error.message : String(error)}。原草稿未覆盖，请先导出备份或修正后重新导入。`,
     }
   }
@@ -183,7 +185,7 @@ export default function App() {
   async function importPlan(file: File) {
     try {
       if (file.size > MAX_PLAN_BYTES) throw new Error('文件不能超过 512 KiB')
-      const next = validatePlan(JSON.parse(await file.text()))
+      const next = mergeGitHubParticipants(validatePlan(JSON.parse(await file.text())), participants)
       if (dirty) {
         setPendingCloud({ plan: next, revision: -1 })
         setNotice('导入文件已校验。确认后将替换当前草稿；建议先导出备份。')
@@ -203,6 +205,7 @@ export default function App() {
     try {
       const result = await cloudRequest(apiUrl, token, action === 'save' ? { plan: snapshot, revision: revision! } : undefined)
       if (action === 'load') {
+        result.plan = mergeGitHubParticipants(result.plan, participants)
         if (dirty || planRef.current !== snapshot) {
           setPendingCloud(result)
           setNotice('共享规划已读取，尚未覆盖本地修改。请确认替换或保留草稿。')
@@ -264,7 +267,7 @@ export default function App() {
         <div className="privacy-note"><Icon icon={uiIcon(revision === null ? 'lock' : 'cloudflare')} decorative /><strong>{revision === null ? '本地草稿' : `共享 v${revision}`}</strong></div>
       </aside>
       <main id="workspace" className={`workspace ${tab === '原始架构' ? 'original' : ''}`}>
-        <div className="view-heading"><h2>{tab}</h2>{tab !== '项目现状' && <span>{tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>
+        <div className="view-heading"><h2>{tab}</h2>{tab !== '项目现状' && <span>{tab === '团队成员' ? plan.people.length : tab === '技术组件' ? visibleComponents.length : visible.length}</span>}</div>
         {tab === '项目现状' && <CurrentArchitecture plan={plan} onComponent={id => { setSelectedComponent(id); setTab('技术组件'); setQuery(''); setOwnerFilter('') }} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} />}
         {tab === '架构画布' && <>{visible.length ? <ReactFlowProvider><Canvas plan={plan} visible={visible} selected={selected} onSelect={setSelected} onChange={apply} /></ReactFlowProvider> : <div className="empty">没有匹配的模块</div>}</>}
         {tab === '分工清单' && <div className="table-wrap"><table><caption className="sr-only">模块、主负责人及协作负责人</caption><thead><tr><th>模块与职责</th><th>架构层</th><th>主 owner</th><th>协作 owner</th><th>状态</th></tr></thead><tbody>{visible.map(module => <tr key={module.id} className={selected === module.id ? 'selected-row' : ''}><td><button className="module-link" aria-label={`${module.id} ${module.name}`} onClick={() => setSelected(module.id)}><span className="code">{module.id}</span>{module.name}</button><small>{module.summary}</small></td><td>{layers[module.layer] ?? module.layer}</td><td>{module.owners.filter(owner => owner.role === 'primary').map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、') || '未分配'}</td><td>{module.owners.filter(owner => owner.role === 'secondary').map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、') || '—'}</td><td><span className={`state state-${module.status}`}>{statuses[module.status]}</span></td></tr>)}</tbody></table>{!visible.length && <div className="empty">没有匹配的模块</div>}</div>}
