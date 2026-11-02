@@ -300,6 +300,7 @@ function Planner({ published }: { published: Plan }) {
         {tab === '原始架构' && <><p className="view-hint">只读基线</p><iframe title="AI-MEM 原始架构" src={`${import.meta.env.BASE_URL}architecture.html`} /></>}
       </main>
       {tab === '技术组件' && component ? <aside className="inspector"><ComponentEditor key={JSON.stringify([component.id, component.owners])} component={component} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside> : module && tab !== '原始架构' && tab !== '项目现状' && <aside className="inspector"><OwnerEditor key={JSON.stringify([module.id, module.name, module.summary, module.detail, module.status, module.owners, module.components])} module={module} plan={plan} onApply={apply} onTeam={() => setTab('团队成员')} onModule={id => { setSelected(id); setTab('分工清单'); setQuery(''); setLayer(''); setOwnerFilter('') }} /></aside>}
+      {tab === '架构画布' && !module && <aside className="inspector"><p className="muted">点击卡片查看模块；再次点击取消选中。</p></aside>}
     </div>
     {tab !== '架构画布' && <footer><p role="status">{notice}</p></footer>}
   </div>

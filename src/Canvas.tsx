@@ -102,7 +102,7 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
       ariaLabel: `${module.id} ${module.name}${relation ? ` · ${relation}` : ''}`,
     }
   }), [visible, plan.people, plan.components, selected, sizes, layout, neighborhood])
-  const edges = availableEdges.filter(edge => !focusOnly || edge.source === selected || edge.target === selected)
+  const edges = availableEdges.filter(edge => !focusOnly || !neighborhood.active || edge.source === selected || edge.target === selected)
     .map<DependencyEdge>(edge => {
       const direction = edge.target === selected ? 'upstream' : edge.source === selected ? 'downstream' : 'other'
       const color = edgeColors[direction]
@@ -114,7 +114,20 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
         markerEnd: { type: MarkerType.ArrowClosed, color },
       }
     })
-  return <div className="canvas">
+  return <div className="canvas" onKeyDownCapture={event => {
+    if (!(event.target instanceof HTMLElement) || !event.target.matches('.react-flow__node')) return
+    const id = event.target.dataset.id
+    if (!id) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      event.stopPropagation()
+      onSelect(selected === id ? '' : id)
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      onSelect('')
+    }
+  }}>
     <div className="canvas-toolbar" aria-label="拓扑布局工具">
       <div className="canvas-toolbar-row">
         <button type="button" onClick={() => setLayoutAttempt(value => value + 1)} disabled={layoutPending}>重新布局</button>
@@ -136,9 +149,10 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
           for (const change of dimensions) if (change.dimensions) next[change.id] = change.dimensions
           return next
         })
-        for (const change of changes) if (change.type === 'select' && change.selected) onSelect(change.id)
       }}
-      onNodeClick={(_, node) => onSelect(node.id)}
+      onNodeClick={(_, node) => onSelect(selected === node.id ? '' : node.id)}
+      onPaneClick={() => { onSelect(''); setSelectedEdge(null) }}
+      onNodeDragStart={(_, node) => onSelect(node.id)}
       onNodeDrag={(_, node) => {
         setLayoutState(current => current?.value ? ({
           ...current,

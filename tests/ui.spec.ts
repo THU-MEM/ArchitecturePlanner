@@ -397,6 +397,58 @@ test('selecting modules highlights direct upstream and downstream neighbors, han
   expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
 })
 
+test('canvas selection toggles off by repeat click, keyboard and blank canvas without hiding dependencies or changing data', async ({ page }) => {
+  const plan = {
+    ...seed,
+    modules: seed.modules.filter(module => ['M01', 'M02', 'M03', 'M04'].includes(module.id)),
+    relationships: [
+      { id: 'one-two', source: 'M01', target: 'M02' },
+      { id: 'two-three', source: 'M02', target: 'M03' },
+    ],
+  }
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
+  await page.goto('./')
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  const node = page.locator('.react-flow__node[data-id="M02"]')
+  const originalViewport = await page.locator('.react-flow__viewport').getAttribute('style')
+  await node.click()
+  await expect(node).toHaveClass(/selected/)
+  await expect(page.locator('.node-dimmed')).toHaveCount(1)
+  await page.getByRole('checkbox', { name: '全部连线', exact: true }).uncheck()
+  await node.click()
+  await expect(page.locator('.react-flow__node.selected')).toHaveCount(0)
+  await expect(page.locator('.node-dimmed, .node-upstream, .node-downstream')).toHaveCount(0)
+  await expect(page.locator('.react-flow__edge')).toHaveCount(2)
+  for (const card of await page.locator('.planner-node').all()) await expect(card).toHaveCSS('opacity', '1')
+  for (const edge of await page.locator('.react-flow__edge-path').all()) await expect(edge).toHaveCSS('opacity', '1')
+  await expect(page.getByLabel('模块名称')).toHaveCount(0)
+  await expect(page.locator('.inspector')).toContainText('再次点击取消选中')
+  await expect(page.locator('.react-flow__viewport')).toHaveAttribute('style', originalViewport!)
+  await node.click()
+  await expect(node).toHaveClass(/selected/)
+  await expect(page.getByLabel('模块名称')).toHaveValue(plan.modules.find(module => module.id === 'M02')!.name)
+  await node.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.react-flow__node.selected')).toHaveCount(0)
+  await page.keyboard.press('Space')
+  await expect(node).toHaveClass(/selected/)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.react-flow__node.selected')).toHaveCount(0)
+  await node.click()
+  await page.locator('.react-flow__pane').click({ position: { x: 8, y: 8 } })
+  await expect(page.locator('.react-flow__node.selected')).toHaveCount(0)
+  await expect(page.locator('.react-flow__edge')).toHaveCount(2)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.locator('.canvas').scrollIntoViewIfNeeded()
+  await page.getByRole('button', { name: '重新布局', exact: true }).click()
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  await node.click()
+  await expect(node).toHaveClass(/selected/)
+  await node.click()
+  await expect(page.locator('.react-flow__node.selected')).toHaveCount(0)
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+})
+
 test('workspace renders without page errors or viewport overflow at desktop and mobile sizes', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
