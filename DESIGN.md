@@ -33,7 +33,7 @@ System UI fonts support Chinese and English. Hierarchy comes from weight and siz
 
 ## Layout
 Desktop uses navigation, workspace and inspector columns. Narrow screens stack the inspector and keep navigation compact. Diagram layouts remain user-editable.
-Dense dependency graphs focus on the selected module by default, with an explicit full-edge toggle and a visible shown/available count. Inspector links distinguish upstream providers from downstream consumers; neither navigation nor display filtering changes the planning data.
+Dense graphs focus on the selected module, with all dependencies available on demand. Upstream/downstream navigation and display filtering never modify planning data.
 
 ## Elevation & Depth
 Hairline borders and tonal layering lead; soft offset shadows distinguish selected graph nodes.
@@ -43,6 +43,7 @@ Compact rounded controls and nodes, without decorative panels.
 
 ## Components
 Icon-only actions have accessible names and tooltips. Native owner controls retain names. Details and the component palette expand only when requested. Published/draft status, GitHub handoff instructions, errors and replacement warnings remain explicit.
+Local initials avatars identify participants across views; owner tooltips include names and roles, and primary owners have an outline.
 
 ## Do's and Don'ts
 Do preserve original SVG colors and keyboard focus. Do keep assignments visibly actionable. Don't replace meaningful names with ambiguous logos or imply that local data is shared.

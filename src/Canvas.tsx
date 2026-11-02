@@ -2,19 +2,20 @@ import { useEffect, useMemo, useState } from 'react'
 import { Background, Controls, Handle, MarkerType, Position, ReactFlow, useNodesInitialized, useReactFlow } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { addRelationship, statuses, updateModule } from './plan.ts'
-import type { Module, Plan } from './plan.ts'
+import type { Module, Person, Plan } from './plan.ts'
+import { OwnerAvatars } from './Avatar.tsx'
 import Icon from './Icon.tsx'
 import { componentIcons, moduleIcon, uiIcon } from './icons.ts'
 import type { IconReference } from './icons.ts'
 import '@xyflow/react/dist/style.css'
 
-type PlannerNode = Node<{ module: Module; owners: string; logos: IconReference[] }, 'module'>
+type PlannerNode = Node<{ module: Module; people: Person[]; logos: IconReference[] }, 'module'>
 function ModuleNode({ data }: NodeProps<PlannerNode>) {
   return <div className={`planner-node layer-${data.module.layer}`}>
     <Handle type="target" position={Position.Top} />
     <div className="node-meta"><Icon icon={moduleIcon(data.module.id)} decorative /><span className="code">{data.module.id}</span><span className={`node-state status-${data.module.status}`} title={statuses[data.module.status]} aria-label={statuses[data.module.status]} /></div>
     <strong>{data.module.name}</strong>
-    <div className="node-footer"><div className="logo-stack">{data.logos.map(icon => <Icon key={icon.src} icon={icon} />)}</div><span className="node-owner" title={data.owners || '未分配'}>{data.owners ? data.owners.slice(0, 2) : <Icon icon={uiIcon('person')} decorative />}</span></div>
+    <div className="node-footer"><div className="logo-stack">{data.logos.map(icon => <Icon key={icon.src} icon={icon} />)}</div>{data.module.owners.length ? <OwnerAvatars owners={data.module.owners} people={data.people} /> : <span className="node-owner" title="未分配"><Icon icon={uiIcon('person')} decorative /></span>}</div>
     <Handle type="source" position={Position.Bottom} />
   </div>
 }
@@ -38,7 +39,7 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
     id: module.id, type: 'module', position: module.position, selected: selected === module.id, deletable: false, measured: sizes[module.id],
     data: {
       module,
-      owners: module.owners.filter(owner => owner.role === 'primary').map(owner => plan.people.find(person => person.id === owner.personId)?.name).join('、'),
+      people: plan.people,
       logos: [...new Map(plan.components.filter(component => module.components.includes(component.id)).flatMap(componentIcons).filter(icon => icon.brand).map(icon => [icon.src, icon])).values()].slice(0, 6),
     },
     ariaLabel: `${module.id} ${module.name}`,
