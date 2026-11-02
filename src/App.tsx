@@ -169,6 +169,16 @@ function Planner({ published }: { published: Plan }) {
   const [pendingImport, setPendingImport] = useState<Plan | null>(null)
   const [localSaved, setLocalSaved] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  function discardSavedDraft() {
+    try {
+      localStorage.removeItem(storageKey)
+      setSavedDraft(null)
+      setError('')
+      setNotice('已删除本地草稿 · 当前展示已发布规划')
+    } catch (error) {
+      setError(`删除本地草稿失败：${error instanceof Error ? error.message : String(error)}。草稿未删除，请重试。`)
+    }
+  }
   function apply(next: Plan) {
     setPlan(next)
     setSavedDraft(null)
@@ -270,7 +280,7 @@ function Planner({ published }: { published: Plan }) {
       <p className="submission-help">在 GitHub 登录后替换文件内容，直接 Commit 或新建分支提 PR；进入主分支后自动发布。规划及分工会进入公开仓库。</p>
       {copyFailed && <div className="copy-fallback"><label htmlFor="copy-plan">手动复制 JSON</label><textarea id="copy-plan" readOnly rows={6} value={`${JSON.stringify(plan, null, 2)}\n`} onFocus={event => event.currentTarget.select()} /><a href={githubEditUrl} rel="noreferrer">前往 GitHub 编辑</a></div>}
     </section>}
-    {savedDraft && <section className="draft-panel"><p>有一份本地草稿，当前展示已发布规划。</p><button onClick={() => apply(savedDraft)}>恢复本地草稿</button></section>}
+    {savedDraft && <section className="draft-panel" aria-label="本地草稿提示"><p>有一份本地草稿，当前展示已发布规划。</p><button onClick={() => apply(savedDraft)}>恢复本地草稿</button><button type="button" onClick={discardSavedDraft} title="删除此浏览器保存的草稿，刷新后不再提示">删除本地草稿</button></section>}
     {error && <div className="message error" role="alert"><div>{error}</div><button aria-label="关闭错误提示" onClick={() => setError('')}>关闭</button></div>}
     {pendingImport && <section className="replace-panel"><p>将替换当前草稿。尚未导出的修改可能丢失，请先备份。</p><button onClick={exportPlan}>先导出当前规划</button><button className="primary" onClick={() => {
       apply(pendingImport)

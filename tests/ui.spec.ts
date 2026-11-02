@@ -416,6 +416,8 @@ test('published topology automatically unfolds all dependencies without creating
   await expect(page.locator('.planner-node > .node-meta > strong')).toHaveCount(publishedPlan.modules.length)
   await expect(page.locator('.planner-node > strong')).toHaveCount(0)
   await expect(page.locator('.planner-node > .node-footer')).toHaveCount(publishedPlan.modules.length)
+  await expect(page.locator('.planner-node .node-meta strong').first()).toHaveCSS('font-size', '18px')
+  await expect(page.locator('.planner-node .node-meta .code').first()).toHaveCSS('font-size', '12px')
   await expect(page.locator('.react-flow__node[data-id="M01"] .node-meta')).toHaveAttribute('title', new RegExp(publishedPlan.modules.find(module => module.id === 'M01')!.name))
   const layerLegend = page.getByRole('group', { name: '架构层颜色图例', exact: true })
   await expect(layerLegend.locator('.layer-key')).toHaveCount(5)

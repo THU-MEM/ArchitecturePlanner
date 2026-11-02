@@ -110,6 +110,42 @@ test('published JSON is authoritative and local drafts are recovered only on req
   await page.screenshot({ path: '.impeccable/review/pr-mobile.png', fullPage: true, animations: 'disabled' })
 })
 
+test('discarding the saved draft removes it permanently without replacing the published plan or unrelated storage', async ({ page }) => {
+  await page.goto('./')
+  await page.evaluate(plan => {
+    localStorage.setItem('architecture-planner.plan.v1', JSON.stringify(plan))
+    localStorage.setItem('unrelated-setting', 'keep')
+  }, { ...seed, name: 'Unwanted draft' })
+  await page.reload()
+  await expect(page.getByRole('region', { name: '本地草稿提示', exact: true })).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: '删除本地草稿', exact: true }).click()
+  await expect(page.getByRole('region', { name: '本地草稿提示', exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('模块名称')).toHaveValue(seed.modules.find(module => module.id === 'M01')!.name)
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  expect(await page.evaluate(() => localStorage.getItem('unrelated-setting'))).toBe('keep')
+  await page.reload()
+  await expect(page.getByRole('heading', { name: '架构规划台', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '恢复本地草稿', exact: true })).toHaveCount(0)
+  await page.getByLabel('模块名称').fill('New deliberate edit')
+  await page.getByRole('button', { name: '应用修改', exact: true }).click()
+  await page.reload()
+  await expect(page.getByRole('button', { name: '恢复本地草稿', exact: true })).toBeVisible()
+})
+
+test('failed draft deletion keeps the recovery prompt and surfaces an explicit error', async ({ page }) => {
+  await page.goto('./')
+  await page.evaluate(plan => localStorage.setItem('architecture-planner.plan.v1', JSON.stringify(plan)), seed)
+  await page.reload()
+  await page.evaluate(() => {
+    Storage.prototype.removeItem = () => { throw new DOMException('Storage blocked', 'SecurityError') }
+  })
+  await page.getByRole('button', { name: '删除本地草稿', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('删除本地草稿失败')
+  await expect(page.getByRole('button', { name: '恢复本地草稿', exact: true })).toBeVisible()
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).not.toBeNull()
+})
+
 test('a failed published JSON load shows an explicit error and can be retried', async ({ page }) => {
   await page.route('**/src/seed-plan.json', route => route.fulfill({ status: 503, body: 'Unavailable' }))
   await page.goto('./')
