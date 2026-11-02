@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import seed from './fixture.ts'
 import { mkdir } from 'node:fs/promises'
+import publishedPlan from '../src/seed-plan.json' with { type: 'json' }
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/src/seed-plan.json', route => route.fulfill({ json: seed }))
@@ -260,6 +261,28 @@ test('canvas fills the desktop viewport while the inspector scrolls independentl
   expect(await page.locator('.workspace > .empty').evaluate(element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight))).toBeLessThanOrEqual(1)
 })
 
+test('published topology automatically unfolds all dependencies without creating a local draft', async ({ page }) => {
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: publishedPlan }))
+  await page.goto('./')
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  await expect(page.locator('.react-flow__edge')).toHaveCount(publishedPlan.relationships.length)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect.poll(() => page.locator('.react-flow__node').evaluateAll(elements => elements.every(element => {
+    const node = element.getBoundingClientRect()
+    const viewport = element.closest('.react-flow')!.getBoundingClientRect()
+    return node.left >= viewport.left && node.right <= viewport.right && node.top >= viewport.top && node.bottom <= viewport.bottom
+  }))).toBeTruthy()
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/topology-desktop.png', animations: 'disabled' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.locator('.canvas').scrollIntoViewIfNeeded()
+  await page.getByRole('button', { name: '重新布局', exact: true }).click()
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+  await page.screenshot({ path: '.impeccable/review/topology-mobile.png', animations: 'disabled' })
+})
+
 test('workspace renders without page errors or viewport overflow at desktop and mobile sizes', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -302,8 +325,13 @@ test('original modules, primary and secondary owner assignment, export and reloa
 })
 
 test('canvas layout, relationships and deletion persist in the exported plan', async ({ page }) => {
+  await page.route('**/src/seed-plan.json', route => route.fulfill({ json: { ...seed, modules: seed.modules.filter(module => ['M01', 'M02'].includes(module.id)) } }))
   await page.goto('./')
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  await page.getByLabel('搜索模块').fill('M01')
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   const node = page.locator('.react-flow__node[data-id="M01"]')
+  await expect.poll(async () => (await node.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(180)
   const box = await node.boundingBox()
   expect(box).not.toBeNull()
   expect(box!.width).toBeGreaterThanOrEqual(180)
@@ -315,6 +343,8 @@ test('canvas layout, relationships and deletion persist in the exported plan', a
     const draft = localStorage.getItem('architecture-planner.plan.v1')
     return draft ? JSON.parse(draft).modules.find((module: { id: string }) => module.id === 'M01').position.x : null
   })).not.toBe(seed.modules.find(module => module.id === 'M01')!.position.x)
+  await page.getByLabel('搜索模块').fill('')
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   const source = await node.locator('.react-flow__handle.source').boundingBox()
   const target = await page.locator('.react-flow__node[data-id="M02"] .react-flow__handle.target').boundingBox()
   expect(source).not.toBeNull()
@@ -376,7 +406,7 @@ test('module dependency navigation distinguishes upstream and downstream without
   expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
 })
 
-test('dense dependency plans focus on the selected module without dropping edges from the exported JSON', async ({ page }) => {
+test('dense dependency plans show all edges by default, color directions and support optional focus without changing exports', async ({ page }) => {
   const relationships = Array.from({ length: 15 }, (_, index) => ({
     id: `dependency-${index}`, source: `M${String(index + 1).padStart(2, '0')}`, target: `M${String(index + 2).padStart(2, '0')}`,
   }))
@@ -384,9 +414,10 @@ test('dense dependency plans focus on the selected module without dropping edges
   await page.route('**/src/seed-plan.json', route => route.fulfill({ json: plan }))
   await page.goto('./')
   await expect(page.locator('.react-flow__node')).toHaveCount(24)
-  await expect(page.locator('.react-flow__edge')).toHaveCount(1)
-  await expect(page.getByLabel('显示的依赖数', { exact: true })).toHaveText('1/15')
-  const allEdges = page.getByRole('checkbox', { name: '全部连线', exact: true })
+  await expect(page.locator('.react-flow__edge')).toHaveCount(15)
+  await expect(page.getByLabel('显示的依赖数', { exact: true })).toHaveText('15/15')
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  const focusOnly = page.getByRole('checkbox', { name: '仅看当前模块', exact: true })
   expect(await page.evaluate(() => {
     const toolbar = document.querySelector('.canvas-toolbar')!.getBoundingClientRect()
     return [...document.querySelectorAll('.planner-node')].every(node => {
@@ -394,12 +425,19 @@ test('dense dependency plans focus on the selected module without dropping edges
       return box.right <= toolbar.left || box.left >= toolbar.right || box.bottom <= toolbar.top || box.top >= toolbar.bottom
     })
   })).toBe(true)
-  await allEdges.check()
-  await expect(page.locator('.react-flow__edge')).toHaveCount(15)
-  await allEdges.uncheck()
+  await focusOnly.check()
+  await expect(page.locator('.react-flow__edge')).toHaveCount(1)
   await page.locator('.react-flow__node[data-id="M02"]').click()
   await expect(page.locator('.react-flow__edge')).toHaveCount(2)
   await expect(page.getByLabel('显示的依赖数', { exact: true })).toHaveText('2/15')
+  const upstream = page.locator('.dependency-upstream .react-flow__edge-path')
+  const downstream = page.locator('.dependency-downstream .react-flow__edge-path')
+  await expect(upstream).toHaveCSS('stroke', 'rgb(33, 103, 173)')
+  await expect(downstream).toHaveCSS('stroke', 'rgb(163, 77, 18)')
+  await focusOnly.uncheck()
+  await expect(page.locator('.react-flow__edge')).toHaveCount(15)
+  await page.getByRole('button', { name: '重新布局', exact: true }).click()
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: '导出规划', exact: true }).click()

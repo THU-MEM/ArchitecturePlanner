@@ -34,7 +34,7 @@ System UI fonts support Chinese and English. Hierarchy comes from weight and siz
 ## Layout
 Desktop uses navigation, workspace and inspector columns. Narrow screens stack the inspector and keep navigation compact. Diagram layouts remain user-editable.
 On the three-column architecture canvas, the drawing area fills the remaining viewport down to the browser bottom; navigation and inspector scroll independently, with planning status in the sidebar.
-Dense graphs focus on the selected module, with all dependencies available on demand. Upstream/downstream navigation and display filtering never modify planning data.
+Graphs show all dependencies by default, with ELK layered topology layout and orthogonal routes around measured node bounds. Incoming edges to the selected module are blue (#2167ad); outgoing edges are orange (#a34d12); other dependencies stay gray. A text legend explains direction without relying only on color. Focus filtering is optional; automatic layout and display filtering never modify planning data. Manual dragging persists the displayed positions and uses dynamic connectors for affected edges.
 
 ## Elevation & Depth
 Hairline borders and tonal layering lead; soft offset shadows distinguish selected graph nodes.

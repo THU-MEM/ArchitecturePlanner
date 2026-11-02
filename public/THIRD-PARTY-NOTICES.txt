@@ -85,3 +85,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Automatic graph layout: elkjs (Eclipse Layout Kernel), EPL-2.0.
+Source and corresponding unmodified library source:
+https://github.com/kieler/elkjs
+https://www.npmjs.com/package/elkjs/v/0.11.0
+License: https://www.eclipse.org/legal/epl-2.0/

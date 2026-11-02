@@ -29,6 +29,12 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: topology-preview
+          path: .impeccable/review/topology-*.png
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: browser-failure
