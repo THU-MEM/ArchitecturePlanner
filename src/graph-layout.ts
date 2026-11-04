@@ -67,13 +67,21 @@ export async function layoutGraph(modules: Pick<Module, 'id'>[], relationships: 
         collect(node, position)
       } else positions[node.id] = position
     }
+  }
+  function collectRoutes(container: ElkNode, offset: Position) {
     for (const edge of container.edges ?? []) {
       const section = edge.sections?.[0]
       if (!section || edge.sections?.length !== 1) throw new Error(`依赖 ${edge.id} 缺少完整连线路径`)
+      const origin = edge.container === graph.id ? { x: 0, y: 0 } : edge.container ? groupBounds[edge.container] : offset
+      if (!origin) throw new Error(`依赖 ${edge.id} 的容器缺少坐标`)
       routes[edge.id] = [section.startPoint, ...section.bendPoints ?? [], section.endPoint]
-        .map(point => ({ x: point.x + offset.x, y: point.y + offset.y }))
+        .map(point => ({ x: point.x + origin.x, y: point.y + origin.y }))
+    }
+    for (const node of container.children ?? []) {
+      if (node.children) collectRoutes(node, groupBounds[node.id])
     }
   }
   collect(graph, { x: 0, y: 0 })
+  collectRoutes(graph, { x: 0, y: 0 })
   return { positions, routes, groups: groupBounds }
 }
