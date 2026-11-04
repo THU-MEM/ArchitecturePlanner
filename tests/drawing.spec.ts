@@ -7,7 +7,9 @@ import seed from './fixture.ts'
 type SceneElement = {
   id: string; type: string; x: number; y: number; width: number; height: number
   fileId?: string; text?: string; points?: number[][]
-  startBinding?: { elementId: string }; endBinding?: { elementId: string }
+  startBinding?: { elementId: string; fixedPoint?: number[] }; endBinding?: { elementId: string; fixedPoint?: number[] }
+  boundElements?: { id: string; type: string }[]
+  startArrowhead?: string | null; endArrowhead?: string | null; strokeStyle?: string; elbowed?: boolean
   customData?: { logo: string }
 }
 type Scene = { elements: SceneElement[]; files: Record<string, { dataURL: string; mimeType: string }> }
@@ -51,6 +53,22 @@ async function downloadBytes(page: Page, button: string) {
   const chunks: Buffer[] = []
   for await (const chunk of stream) chunks.push(chunk)
   return { bytes: Buffer.concat(chunks), filename: download.suggestedFilename() }
+}
+
+async function connectFromPort(page: Page, side: string, target: { x: number; y: number }) {
+  const port = page.getByRole('button', { name: `从${side}侧锚点连线`, exact: true })
+  const box = (await port.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(target.x, target.y, { steps: 12 })
+  await expect(page.locator('.drawing-connect-target')).toBeVisible()
+  await page.mouse.up()
+}
+
+async function dropLogo(page: Page, name: string, x: number, y: number) {
+  const transfer = await page.evaluateHandle(() => new DataTransfer())
+  await page.getByRole('button', { name: `插入 ${name} Logo`, exact: true }).dispatchEvent('dragstart', { dataTransfer: transfer })
+  await page.locator('.drawing-stage canvas.interactive').dispatchEvent('drop', { dataTransfer: transfer, clientX: x, clientY: y })
 }
 
 test.beforeEach(async ({ page }) => {
@@ -264,6 +282,104 @@ test('expanded SVG library filters Alibaba services, renders transparent assets 
   await page.getByRole('button', { name: '插入 阿里云 ECS · 云服务器 Logo', exact: true }).click()
   await expect(palette).toHaveCount(0)
   await expect(page.locator('.drawing-save-status')).toContainText('3 个元素')
+})
+
+test('component ports create native source-to-target arrows, follow moved shapes and support undo, styles, export and reload', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto('./')
+  await openDrawing(page)
+  await draw(page, 'rectangle', [340, 200], [520, 340])
+  await draw(page, 'rectangle', [740, 200], [920, 340])
+  await selectTool(page, 'selection')
+  const box = (await page.locator('.drawing-stage').boundingBox())!
+  await page.mouse.click(box.x + 400, box.y + 200)
+  await expect(page.locator('.drawing-connect-anchor')).toHaveCount(4)
+  const [source, target] = (await scene(page)).elements
+  await connectFromPort(page, '右', { x: box.x + 740, y: box.y + 270 })
+  await expect.poll(async () => (await scene(page)).elements.filter(element => element.type === 'arrow').length).toBe(1)
+  const created = (await scene(page)).elements.find(element => element.type === 'arrow')!
+  expect(created.startBinding?.elementId).toBe(source.id)
+  expect(created.endBinding?.elementId).toBe(target.id)
+  expect(created.startBinding!.fixedPoint![0]).toBeCloseTo(1, 3)
+  expect(created.startBinding!.fixedPoint![1]).toBeCloseTo(0.5, 3)
+  expect(created.endBinding!.fixedPoint![0]).toBeCloseTo(0, 3)
+  expect(created.endBinding!.fixedPoint![1]).toBeCloseTo(0.5, 3)
+  expect(created.startArrowhead).toBeNull()
+  expect(created.endArrowhead).toBe('arrow')
+  expect(created.elbowed).toBe(true)
+  expect(created.points!.every((point, index, points) => !index || point[0] === points[index - 1][0] || point[1] === points[index - 1][1])).toBe(true)
+  for (const id of [source.id, target.id]) expect((await scene(page)).elements.find(element => element.id === id)!.boundElements).toContainEqual({ type: 'arrow', id: created.id })
+  await page.locator('.drawing-stage .excalidraw').focus()
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await scene(page)).elements.filter(element => element.type === 'arrow').length).toBe(0)
+  for (const element of (await scene(page)).elements) expect(element.boundElements ?? []).not.toContainEqual({ type: 'arrow', id: created.id })
+  await page.keyboard.press('Control+Shift+z')
+  await expect(page.getByRole('group', { name: '连线设置', exact: true })).toBeVisible()
+  await page.getByLabel('连线线型', { exact: true }).selectOption('dashed')
+  await page.getByLabel('连线箭头', { exact: true }).selectOption('both')
+  await expect.poll(async () => (await scene(page)).elements.find(element => element.id === created.id)!.strokeStyle).toBe('dashed')
+  expect((await scene(page)).elements.find(element => element.id === created.id)).toMatchObject({ startArrowhead: 'arrow', endArrowhead: 'arrow' })
+  await page.getByLabel('连线箭头', { exact: true }).selectOption('none')
+  expect((await scene(page)).elements.find(element => element.id === created.id)).toMatchObject({ startArrowhead: null, endArrowhead: null })
+  await page.getByLabel('连线箭头', { exact: true }).selectOption('end')
+  await page.mouse.move(box.x + 800, box.y + 200)
+  await page.mouse.down()
+  await page.mouse.move(box.x + 840, box.y + 230, { steps: 10 })
+  await page.mouse.up()
+  await expect.poll(async () => (await scene(page)).elements.find(element => element.id === target.id)!.x).not.toBe(target.x)
+  const moved = (await scene(page)).elements.find(element => element.id === created.id)!
+  expect(moved.endBinding?.elementId).toBe(target.id)
+  expect([moved.x, moved.y, moved.points]).not.toEqual([created.x, created.y, created.points])
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/topology-drawing-anchors-desktop.png', animations: 'disabled' })
+  const backup = await downloadBytes(page, '下载画布文件')
+  expect(JSON.parse(backup.bytes.toString('utf8')).elements.find((element: SceneElement) => element.id === created.id)).toMatchObject({ strokeStyle: 'dashed', endArrowhead: 'arrow' })
+  const png = await downloadBytes(page, '导出 PNG')
+  expect(png.bytes.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+  await page.reload()
+  await openDrawing(page)
+  expect((await scene(page)).elements.find(element => element.id === created.id)).toMatchObject({ startBinding: { elementId: source.id }, endBinding: { elementId: target.id }, strokeStyle: 'dashed' })
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  expect(errors).toEqual([])
+})
+
+test('logo ports bind images in the drag direction, cancel empty drops and offer a keyboard-accessible target picker', async ({ page }) => {
+  await page.goto('./')
+  await openDrawing(page)
+  const box = (await page.locator('.drawing-stage').boundingBox())!
+  await dropLogo(page, 'PostgreSQL', box.x + 360, box.y + 250)
+  await dropLogo(page, 'React', box.x + 800, box.y + 400)
+  await expect(page.locator('.drawing-save-status')).toContainText('2 个元素')
+  const images = (await scene(page)).elements
+  const postgres = images.find(element => element.customData?.logo === 'PostgreSQL')!
+  const react = images.find(element => element.customData?.logo === 'React')!
+  await connectFromPort(page, '左', { x: box.x + 360, y: box.y + 250 })
+  const arrow = (await scene(page)).elements.find(element => element.type === 'arrow')!
+  expect(arrow).toMatchObject({ startBinding: { elementId: react.id }, endBinding: { elementId: postgres.id }, startArrowhead: null, endArrowhead: 'arrow' })
+  await page.mouse.click(box.x + 800, box.y + 400)
+  const port = page.getByRole('button', { name: '从下侧锚点连线', exact: true })
+  await port.hover()
+  await page.mouse.down()
+  await page.mouse.move(box.x + 1000, box.y + 650, { steps: 8 })
+  await page.mouse.up()
+  expect((await scene(page)).elements.filter(element => element.type === 'arrow')).toHaveLength(1)
+  await port.hover()
+  await page.mouse.down()
+  await page.mouse.move(box.x + 360, box.y + 250, { steps: 8 })
+  await page.keyboard.press('Escape')
+  await page.mouse.up()
+  expect((await scene(page)).elements.filter(element => element.type === 'arrow')).toHaveLength(1)
+  await draw(page, 'rectangle', [420, 500], [600, 620])
+  const rectangle = (await scene(page)).elements.find(element => element.type === 'rectangle')!
+  await selectTool(page, 'selection')
+  await page.mouse.click(box.x + 800, box.y + 400)
+  await port.focus()
+  await page.keyboard.press('Enter')
+  await page.getByLabel('连线终点', { exact: true }).selectOption(rectangle.id)
+  await page.getByRole('button', { name: '创建连线', exact: true }).click()
+  await expect.poll(async () => (await scene(page)).elements.filter(element => element.type === 'arrow').length).toBe(2)
+  expect((await scene(page)).elements.filter(element => element.type === 'arrow')[1]).toMatchObject({ startBinding: { elementId: react.id }, endBinding: { elementId: rectangle.id } })
 })
 
 test('invalid imports and failed logo reads report errors without replacing the current drawing', async ({ page }) => {

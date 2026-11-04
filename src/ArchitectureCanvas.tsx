@@ -8,6 +8,7 @@ import type { FileId } from '@excalidraw/excalidraw/element/types'
 import { drawingCategories, drawingLogos, drawingStorageKey, filterDrawingLogos } from './drawing-assets.ts'
 import type { IconReference } from './icons.ts'
 import Icon from './Icon.tsx'
+import DrawingConnections from './DrawingConnections.tsx'
 import '@excalidraw/excalidraw/index.css'
 import './ArchitectureCanvas.css'
 
@@ -233,12 +234,13 @@ export default function ArchitectureCanvas() {
             <MainMenu.DefaultItems.ChangeCanvasBackground />
           </MainMenu>
         </Excalidraw>
+        <DrawingConnections api={api} onError={setError} />
       </div>
       {paletteOpen && <aside className="drawing-logos" id="drawing-logos" aria-label="技术 Logo 素材">
         <div className="section-title"><h3>技术 Logo</h3><button type="button" onClick={() => setPaletteOpen(false)} aria-label="关闭 Logo 素材">关闭</button></div>
         <p>点击或拖入画布，保留透明背景，可缩放、移动。</p>
         <label>搜索 Logo<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="ECS、对象存储、PostgreSQL…" /></label>
-        <label className="drawing-category">素材分类<select value={category} onChange={event => setCategory(event.target.value)}>
+        <label className="drawing-category">素材分类<select aria-label="素材分类" value={category} onChange={event => setCategory(event.target.value)}>
           <option value="">全部分类</option>
           {Object.entries(drawingCategories).map(([id, name]) => <option key={id} value={id}>{name}（{drawingLogos.filter(icon => icon.category === id).length}）</option>)}
         </select></label>

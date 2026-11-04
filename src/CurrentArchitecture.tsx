@@ -52,6 +52,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   const [result, setResult] = useState<{ key: string; layout: GraphLayout | null; error: string } | null>(null)
   const [fittedKey, setFittedKey] = useState('')
   const flowRef = useRef<ReactFlowInstance<ProjectNode, DependencyEdge> | null>(null)
+  const mapRef = useRef<HTMLDivElement>(null)
   const facts = technicalFacts.filter(item => scope === 'all' || (scope === 'runtime' ? item.runtime === 'ready' || item.runtime === 'blocked' : item.runtime !== 'ready' && item.runtime !== 'blocked'))
   const flows = technicalFlows.filter(flow => facts.some(item => item.id === flow.source) && facts.some(item => item.id === flow.target))
   const layoutInput = JSON.stringify({ modules: facts.map(({ id }) => ({ id })), relationships: flows.map(({ id, source, target }) => ({ id, source, target })) })
@@ -105,7 +106,12 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   function inspect(id: string) {
     setSelected(id)
     const node = nodes.find(item => item.id === id)
-    if (node) void flowRef.current?.setCenter(node.position.x + 135, node.position.y + 71, { zoom: 0.9 })
+    const bounds = mapRef.current?.getBoundingClientRect()
+    if (node && bounds) void flowRef.current?.setViewport({
+      x: bounds.width / 2 - (node.position.x + 135) * 0.9,
+      y: bounds.height / 2 - (node.position.y + 71) * 0.9,
+      zoom: 0.9,
+    })
   }
   return <section className="current-architecture" aria-label="当前项目架构">
     <p className="runtime-summary">SSH 核对：{runtimeSnapshot.inspectedAt} · {runtimeSnapshot.nodes} 节点 / {runtimeSnapshot.pods} Pod · {runtimeSnapshot.running} Running / {runtimeSnapshot.pending} Pending · 只读快照，非实时监控 · <span>源码已实现 ≠ 生产已上线</span></p>
@@ -118,7 +124,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
     </div>
     {result?.key === layoutKey && result.error && <p className="error" role="alert">{result.error}</p>}
     {pending && !result?.error && <p className="technical-layout-status" role="status">正在自动布局…</p>}
-    <div className="technical-body"><div className="current-map">
+    <div className="technical-body"><div className="current-map" ref={mapRef}>
       <ReactFlow<ProjectNode, DependencyEdge> nodes={nodes} nodeTypes={nodeTypes} edges={edges} edgeTypes={edgeTypes} onInit={instance => { flowRef.current = instance }} onPaneClick={() => setSelected('')} minZoom={0.04} maxZoom={1.5}
         nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} deleteKeyCode={null} proOptions={{ hideAttribution: false }}>
         <Background gap={24} color="#d8e3e9" /><Controls showInteractive={false} />

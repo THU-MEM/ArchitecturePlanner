@@ -40,7 +40,11 @@ await save('alibabacloud.svg', Buffer.from(alibaba.toString('utf8').replace('<sv
 
 for (const [code, , glyph] of library.alibabaServices) {
   const svg = await readFile(join(root, 'public', 'icons', `lucide-${glyph}.svg`), 'utf8')
-  const illustration = svg.replace('<svg ', '<svg x="24" y="4" width="48" height="48" ').replaceAll('#285a72', '#a54800')
+  const illustration = svg.replace(/<svg\b[^>]*>/, opening => opening
+    .replace(/\s(?:x|y|width|height)="[^"]*"/g, '')
+    .replace(/\s+/g, ' ')
+    .replace('<svg', '<svg x="24" y="4" width="48" height="48"'))
+    .replaceAll('#285a72', '#a54800')
   const fontSize = code.length > 10 ? 10 : code.length > 7 ? 12 : 15
   await save(`aliyun-${code.toLowerCase()}.svg`, Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="88" viewBox="0 0 96 88"><title>Service illustration: ${code}; not an official Alibaba Cloud product icon</title>${illustration}<text x="48" y="77" text-anchor="middle" fill="#a54800" font-family="Arial,sans-serif" font-weight="600" font-size="${fontSize}">${code}</text></svg>\n`,
