@@ -221,6 +221,87 @@ test('mobile canvas fills the viewport, searches and inserts logos while keeping
   expect(await stage.evaluate(element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight))).toBeLessThanOrEqual(1)
 })
 
+test('system clipboard pastes editable text and images with undo, export and reload while preserving text inputs', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('./')
+  await openDrawing(page)
+  const text = '主服务器 → GPU\nTTS 与视频生成'
+  await page.evaluate(value => navigator.clipboard.writeText(value), text)
+  // Pasting works immediately after opening the tab, without an extra canvas click.
+  await page.keyboard.press('Control+v')
+  await expect.poll(async () => (await scene(page)).elements.map(element => element.text)).toEqual([text])
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await scene(page)).elements.length).toBe(0)
+  await page.keyboard.press('Control+Shift+z')
+  await expect.poll(async () => (await scene(page)).elements[0]?.text).toBe(text)
+  await page.keyboard.press('Enter')
+  const editor = page.locator('.excalidraw-wysiwyg')
+  await expect(editor).toBeVisible()
+  await editor.press('Control+End')
+  await page.evaluate(() => navigator.clipboard.writeText(' · 可编辑'))
+  await page.keyboard.press('Control+v')
+  await expect(editor).toHaveValue(`${text} · 可编辑`)
+  await page.keyboard.press('Escape')
+  expect((await scene(page)).elements).toHaveLength(1)
+  await page.getByLabel('搜索 Logo', { exact: true }).focus()
+  await page.evaluate(() => navigator.clipboard.writeText('PostgreSQL'))
+  await page.keyboard.press('Control+v')
+  await expect(page.getByLabel('搜索 Logo', { exact: true })).toHaveValue('PostgreSQL')
+  expect((await scene(page)).elements).toHaveLength(1)
+  await page.evaluate(async () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 160
+    canvas.height = 80
+    const context = canvas.getContext('2d')!
+    context.fillStyle = '#e16424'
+    context.fillRect(0, 0, 160, 80)
+    const blob = await new Promise<Blob>(resolve => canvas.toBlob(value => resolve(value!), 'image/png'))
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+  })
+  await page.getByRole('button', { name: '技术 Logo', exact: true }).focus()
+  await page.keyboard.press('Control+v')
+  await expect.poll(async () => (await scene(page)).elements.filter(element => element.type === 'image').length).toBe(1)
+  const image = (await scene(page)).elements.find(element => element.type === 'image')!
+  expect(image.width / image.height).toBe(2)
+  expect((await scene(page)).files[image.fileId!].mimeType).toBe('image/png')
+  await expect.poll(() => coloredScenePixels(page)).toBeGreaterThan(100)
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await scene(page)).elements.filter(element => element.type === 'image').length).toBe(0)
+  await page.keyboard.press('Control+Shift+z')
+  await expect.poll(async () => (await scene(page)).elements.length).toBe(2)
+  const png = await downloadBytes(page, '导出 PNG')
+  expect([...png.bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+  const backup = JSON.parse((await downloadBytes(page, '下载画布文件')).bytes.toString('utf8'))
+  expect(backup.elements).toHaveLength(2)
+  expect(backup.files[image.fileId!]).toBeDefined()
+  await page.reload()
+  await openDrawing(page)
+  await expect.poll(async () => (await scene(page)).elements.length).toBe(2)
+  await expect.poll(() => coloredScenePixels(page)).toBeGreaterThan(100)
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+})
+
+test('paste preserves native scene copying and reports corrupt images without changing the drawing', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('./')
+  await openDrawing(page)
+  await draw(page, 'rectangle', [340, 200], [520, 340])
+  await selectTool(page, 'selection')
+  const box = (await page.locator('.drawing-stage').boundingBox())!
+  await page.mouse.click(box.x + 400, box.y + 200)
+  await page.keyboard.press('Control+c')
+  await page.mouse.move(box.x + 700, box.y + 400)
+  await page.keyboard.press('Control+v')
+  await expect.poll(async () => (await scene(page)).elements.filter(element => element.type === 'rectangle').length).toBe(2)
+  await page.evaluate(() => {
+    const data = new DataTransfer()
+    data.items.add(new File(['not a PNG'], 'broken.png', { type: 'image/png' }))
+    document.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
+  })
+  await expect(page.getByRole('alert')).toContainText('粘贴失败')
+  expect((await scene(page)).elements).toHaveLength(2)
+})
+
 test('expanded SVG library filters Alibaba services, renders transparent assets and exports them alongside brand logos', async ({ page }) => {
   test.setTimeout(60_000)
   await page.goto('./')

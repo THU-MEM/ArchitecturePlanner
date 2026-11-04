@@ -47,6 +47,7 @@ export default function ArchitectureCanvas() {
   const lastSaved = useRef('')
   const stageRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const pastePoint = useRef<{ clientX: number; clientY: number } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -81,6 +82,79 @@ export default function ArchitectureCanvas() {
       setSaveError(`画布自动保存失败：${error instanceof Error ? error.message : String(error)}。请下载画布文件备份，当前内容仍可编辑和导出。`)
     }
   }, [])
+
+  useEffect(() => {
+    if (!api) return
+    const editor = api
+    let cancelled = false
+    let pasting = false
+    async function insertClipboard(images: File[], text: string) {
+      const rect = stageRef.current?.getBoundingClientRect()
+      if (!rect) throw new Error('绘制区域尚未就绪')
+      const point = pastePoint.current
+      const position = viewportCoordsToSceneCoords(point && point.clientX >= rect.left && point.clientX <= rect.right && point.clientY >= rect.top && point.clientY <= rect.bottom
+        ? point : { clientX: rect.left + rect.width / 2, clientY: rect.top + Math.min(rect.height, window.innerHeight - rect.top) / 2 }, editor.getAppState())
+      const files = await Promise.all(images.map(async file => {
+        if (file.size > 20 * 1024 * 1024) throw new Error('每张图片不能超过 20 MiB')
+        const image = new Image()
+        image.src = await getDataURL(file)
+        await image.decode()
+        if (!image.naturalWidth || !image.naturalHeight) throw new Error('图片没有有效尺寸')
+        const scale = Math.min(1, 4096 / Math.max(image.naturalWidth, image.naturalHeight))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error('浏览器无法读取图片')
+        context.drawImage(image, 0, 0, canvas.width, canvas.height)
+        const id = crypto.randomUUID() as FileId
+        return { id, dataURL: await getDataURL(await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('图片转换失败')), 'image/png'))), mimeType: 'image/png' as const, created: Date.now(), width: canvas.width, height: canvas.height }
+      }))
+      if (cancelled) return
+      const state = editor.getAppState()
+      const elements = files.length ? files.flatMap((file, index) => {
+        const scale = Math.min(1, 480 / Math.max(file.width, file.height))
+        return convertToExcalidrawElements([{ type: 'image', fileId: file.id, status: 'saved', x: position.x + index * 24, y: position.y + index * 24, width: file.width * scale, height: file.height * scale, scale: [1, 1] }])
+      }) : convertToExcalidrawElements([{
+        type: 'text', text, x: position.x, y: position.y,
+        fontFamily: state.currentItemFontFamily, fontSize: state.currentItemFontSize, strokeColor: state.currentItemStrokeColor,
+      }])
+      editor.updateScene({
+        elements: [...editor.getSceneElementsIncludingDeleted(), ...elements],
+        appState: { selectedElementIds: Object.fromEntries(elements.map(element => [element.id, true])) },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      })
+      if (files.length) editor.addFiles(files)
+      editor.setActiveTool({ type: 'selection' })
+      stageRef.current?.querySelector<HTMLElement>('.excalidraw')?.focus()
+      if (window.innerWidth <= 900) setPaletteOpen(false)
+      setError('')
+    }
+    function paste(event: ClipboardEvent) {
+      const target = document.activeElement
+      if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return
+      const clipboard = event.clipboardData
+      if (!clipboard) return
+      const images = Array.from(clipboard.files).filter(file => file.type.startsWith('image/'))
+      const text = clipboard.getData('text/plain')
+      // Keep native scene copy/paste, including its bindings and image files.
+      if (!images.length && /"type"\s*:\s*"(?:excalidraw|excalidraw-api)\/clipboard"/.test(text)) return
+      if (!images.length && !text) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      if (pasting) { setError('正在粘贴图片，请稍后再次粘贴。'); return }
+      pasting = true
+      setBusy(true)
+      void insertClipboard(images, text).catch((error: unknown) => {
+        if (!cancelled) setError(`粘贴失败，已有内容未替换：${error instanceof Error ? error.message : String(error)}。请检查图片格式或重新复制。`)
+      }).finally(() => {
+        pasting = false
+        if (!cancelled) setBusy(false)
+      })
+    }
+    document.addEventListener('paste', paste, true)
+    return () => { cancelled = true; document.removeEventListener('paste', paste, true) }
+  }, [api])
 
   function saveFile() {
     if (!api) return
@@ -213,7 +287,10 @@ export default function ArchitectureCanvas() {
       <button type="button" onClick={() => setPendingImport(null)}>保留当前画布</button>
     </div>}
     <div className="drawing-body">
-      <div className="drawing-stage" ref={stageRef} aria-label="框图与涂鸦绘制区域"
+      <div className="drawing-stage" ref={stageRef} aria-label="框图与涂鸦绘制区域" title="Ctrl+V / ⌘V：粘贴图片或创建文本框"
+        onPointerMoveCapture={event => {
+          if (event.target instanceof HTMLCanvasElement) pastePoint.current = { clientX: event.clientX, clientY: event.clientY }
+        }}
         onDragOverCapture={event => {
           if (event.dataTransfer.types.includes(logoDragType)) { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'copy' }
         }}
