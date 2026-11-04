@@ -32,7 +32,7 @@ test('drawing library has 100+ distinct brand SVGs and 60+ explicitly identified
     }
     if (icon.kind === 'service') {
       assert.match(svg, /not an official Alibaba Cloud product icon/)
-      assert.doesNotMatch(svg, /<rect\b|<image\b/)
+      assert.match(svg, /<g fill="none" stroke="#a54800"/)
     }
   }
   assert.equal(hashes.size, drawingLogos.length, 'Do not inflate the catalog with duplicate SVG files')
