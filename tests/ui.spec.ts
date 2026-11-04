@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import seed from './fixture.ts'
 import { mkdir } from 'node:fs/promises'
 import publishedPlan from '../src/seed-plan.json' with { type: 'json' }
-import { technicalFacts, technicalFlows } from '../src/technical-architecture.ts'
+import { deploymentFactIds, technicalFacts, technicalFlows } from '../src/technical-architecture.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/src/seed-plan.json', route => route.fulfill({ json: seed }))
@@ -248,6 +248,44 @@ test('current architecture distinguishes implemented identity and balance flows 
   await expect(page.getByRole('row').filter({ hasText: 'M01' })).toContainText('Alice')
 })
 
+test('deployment overview separates server domains and browser storage without claiming planned services are running', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('button', { name: '技术架构', exact: true }).click()
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  await expect(page.locator('[data-project]')).toHaveCount(deploymentFactIds.length)
+  await expect(page.locator('[data-domain]')).toHaveCount(2)
+  await expect(page.locator('[data-domain="main-server"]')).toContainText('主服务器')
+  await expect(page.locator('[data-domain="gpu-server"]')).toContainText('规划未核验')
+  for (const id of ['homepage', 'client-integration', 'gpu-tts', 'gpu-video', 'gpu-modeling', 'ssh-tunnel', 'browser-indexeddb', 'pwa-shell']) {
+    await expect(page.locator(`[data-project="${id}"]`)).toHaveAttribute('data-runtime', 'planned')
+  }
+  for (const id of ['gpu-tunnel-session', 'gpu-api-tunnel', 'tunnel-tts', 'homepage-app', 'app-pwa', 'app-local-data', 'pwa-cache']) {
+    await expect(page.locator(`[data-flow="${id}"]`)).toHaveAttribute('data-evidence', 'planned')
+  }
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/topology-technical-deployment-desktop.png', animations: 'disabled' })
+  const detail = page.getByRole('region', { name: '项目实现详情' })
+  await page.getByLabel('项目组件').selectOption('ssh-tunnel')
+  await expect(detail).toContainText('GPU → 主服务器')
+  await expect(detail).toContainText('默认仅绑定回环地址')
+  await page.getByLabel('项目组件').selectOption('client-integration')
+  await expect(detail).toContainText('/app')
+  await expect(detail).toContainText('Agent loop 在用户浏览器执行')
+  await page.getByLabel('项目组件').selectOption('browser-indexeddb')
+  await expect(detail).toContainText('不是服务端数据库')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByLabel('项目组件').selectOption('gpu-tts')
+  await expect(page.locator('[data-project="gpu-tts"]')).toBeInViewport()
+  await page.locator('.current-map').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: '.impeccable/review/topology-technical-deployment-mobile.png', animations: 'disabled' })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  await page.getByLabel('技术架构范围').selectOption('runtime')
+  await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
+  await expect(page.locator('[data-domain="gpu-server"]')).toHaveCount(0)
+  await expect(page.locator('[data-project="gpu-tts"]')).toHaveCount(0)
+})
+
 test('current project navigation frames the selected component on mobile without changing the planning draft', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -306,7 +344,7 @@ test('business and technical navigation preserves the plan and distinguishes run
   await expect(navigation.nth(2)).toHaveAccessibleName('架构画布')
   await expect(navigation.nth(0)).toHaveAttribute('aria-current', 'page')
   await navigation.nth(1).click()
-  await expect(page.getByLabel('技术架构范围')).toHaveValue('runtime')
+  await expect(page.getByLabel('技术架构范围')).toHaveValue('deployment')
   await page.getByLabel('技术架构范围').selectOption('all')
   await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
   await expect(page.locator('[data-project]')).toHaveCount(technicalFacts.length)

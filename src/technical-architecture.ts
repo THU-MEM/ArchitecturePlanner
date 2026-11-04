@@ -22,6 +22,7 @@ export const runtimeSnapshot = {
 }
 const runtimeSource = [{ label: 'SSH 只读现场核对 · 2026-11-02（公开脱敏摘要，不是实时监控）' }]
 const manifestSource = [{ label: 'AI-MEM server/deploy 与 server/services 源码及部署说明（仅职责摘要）' }]
+const planningSource = [{ label: '用户确认的目标架构 · 2026-11-04（未做部署核验）' }]
 
 const observations: Partial<Record<string, Pick<TechnicalFact, 'runtime' | 'observation'>>> = {
   'sso-identity': { runtime: 'ready', observation: 'sso-datacenter：Keycloak Deployment 1/1，Service 8080，1 个就绪端点；已有 APISIX 身份入口。仅核对资源就绪，未验收登录流程。' },
@@ -36,8 +37,8 @@ const observations: Partial<Record<string, Pick<TechnicalFact, 'runtime' | 'obse
 function fact(id: string, name: string, project: string, stack: string, runtime: RuntimeState, detail: string, observation: string, components: string[] = []): TechnicalFact {
   return {
     id, name, project, stack, runtime, detail, observation, components, modules: [],
-    state: 'implemented', position: { x: 0, y: 0 },
-    sources: runtime === 'ready' || runtime === 'blocked' ? runtimeSource : manifestSource,
+    state: runtime === 'planned' ? 'planned' : 'implemented', position: { x: 0, y: 0 },
+    sources: runtime === 'planned' ? planningSource : runtime === 'ready' || runtime === 'blocked' ? runtimeSource : manifestSource,
   }
 }
 
@@ -47,7 +48,44 @@ export const technicalFacts: TechnicalFact[] = [
     observation: item.state === 'planned' ? '平台接入规划，尚未完成联调。' : '此卡描述源码能力或逻辑组件，不代表独立运行的 Pod，也不代表生产集成已验收。',
     sources: observations[item.id] ? [...item.sources, ...runtimeSource] : item.sources,
     ...observations[item.id],
+    ...(item.id === 'client-integration' ? {
+      name: 'Agent 应用 /app',
+      stack: '浏览器 · Agent loop · /app',
+      detail: '官网导航进入 /app，整体交互式 Agent loop 在用户浏览器执行，支持作为 PWA 安装到手机或电脑。通过业务 API 与模型网关调用远端服务；Provider 密钥和 SSH 凭据不进入浏览器，业务数据采用 IndexedDB 分层存储。',
+      observation: '2026-11-04 用户确认的目标架构；/app、PWA 安装和本地存储尚未部署验收，不代表本规划台已实现这些功能。',
+      sources: [...item.sources, ...planningSource],
+    } : {}),
   })),
+  fact('homepage', '官网 Home page', '官网项目 · 主服务器', '/ · Navigation · Web', 'planned',
+    '独立官网项目提供整个产品的前端 Navigation；根路径 / 展示官网，导航到 /app 的 Agent 应用。目标经主服务器入口提供 HTTPS；具体构建与部署方案待落实。',
+    '用户确认即将加入；未核验官网项目或公网路由，不能标为已上线。', ['workspace']),
+  fact('pwa-shell', 'PWA 安装与离线壳', '用户设备 · 浏览器', 'Manifest · Service Worker · HTTPS', 'planned',
+    '为 /app 提供 Web App Manifest、Service Worker 与应用壳缓存；在支持的手机和桌面浏览器安装为独立窗口应用。安装能力依浏览器与系统而异，不等于原生 APP，也不承诺所有模型功能离线可用。',
+    '目标能力；尚未实现或验收安装、更新、离线回退。', ['workspace']),
+  fact('browser-indexeddb', 'IndexedDB 本地分层存储', '用户设备 · 业务数据', 'IndexedDB · 会话 / 记忆 / 任务', 'planned',
+    '在当前设备、当前站点的 IndexedDB 中按会话、记忆、任务与生成结果元数据分层保存结构化数据；不是服务端数据库，也不是 HTTP 资源缓存。容量受浏览器配额约束，清理站点数据可能丢失；不暗示已实现云同步、备份或永久保存。',
+    '用户确认本地优先方向；数据 schema、迁移、保留策略与同步待实现。', ['client-loop']),
+  fact('browser-cache', '应用壳与资源缓存', '用户设备 · 资源层', 'Cache Storage · 静态资源', 'planned',
+    'Service Worker 使用 Cache Storage 缓存应用壳与静态资源；与 IndexedDB 的结构化业务数据分层分工，不将二者当作同一种存储。模型推理仍依赖远端服务。',
+    '目标缓存层；缓存版本、失效和更新策略待实现。', ['workspace']),
+  fact('gpu-compute', 'GPU 模型运行环境', 'GPU 服务器 · 独立域', 'GPU · 模型推理进程', 'planned',
+    '独立 GPU 服务器承载语音、视频生成和建模模型，不据此加入主服务器 Kubernetes 集群。模型服务只经 SSH 反向隧道映射到主服务器，再由主服务器统一暴露 API。',
+    '用户确认目标部署拓扑；未 SSH 核验 GPU 主机、驱动、模型进程或隧道。', ['external-model']),
+  fact('gpu-tts', 'TTS 语音生成节点', 'GPU 服务器 · 模型', 'TTS · 模型 API', 'planned',
+    '在 GPU 服务器部署语音生成模型，未来可增加 TTS 节点；模型 API 经 SSH 反向隧道映射到主服务器。模型选型、节点数量与端口不在本次规划中假定。',
+    '待部署与联调；未声明已有可用语音推理端点。', ['external-model']),
+  fact('gpu-video', '视频生成模型', 'GPU 服务器 · 模型', 'Video Generation · API', 'planned',
+    '视频生成模型在独立 GPU 域执行，通过主服务器的统一 API 入口访问，不直接向用户开放 GPU 主机端口。',
+    '目标模型能力；尚未核验部署和生成任务链路。', ['external-model']),
+  fact('gpu-modeling', '建模模型服务', 'GPU 服务器 · 模型', 'Modeling · 模型 API', 'planned',
+    '建模类模型在 GPU 服务器运行，经相同隧道和主服务器入口提供服务；具体模型类型与协议待确认，不预设产品或实现。',
+    '目标模型能力；尚未核验部署。', ['external-model']),
+  fact('ssh-tunnel', 'SSH 反向隧道映射', '主服务器 · 隧道端点', 'SSH -R · 回环端口', 'planned',
+    'GPU 服务器主动建立到主服务器的 SSH 反向端口转发（-R），将 GPU 模型端口映射为主服务器的本地端口。主服务器是跳板与统一出口；连接建立方向是 GPU → 主服务器，API 请求沿映射反向到 GPU。默认仅绑定回环地址，不直接开放映射端口到公网。',
+    '用户描述的端口镜像按反向隧道建模；隧道保活、认证、端口与故障恢复待配置，未核验正在运行的隧道。'),
+  fact('gpu-api', 'GPU 服务 API 代理', '主服务器 · API / SSH 区域', 'HTTPS · API Proxy · 本地转发', 'planned',
+    '主服务器的 API 代理访问 SSH 映射的本地端口，通过现有 APISIX 入口统一暴露 GPU 模型服务；公网入口需要认证、限流与超时控制。Kubernetes Pod 不能把自身 localhost 当宿主机回环；具体宿主机代理和集群连接方式待实施，不假定已存在 Service 或路由。',
+    '规划的 API / SSH 接入区域；未核验代理、鉴权策略或 APISIX 上游配置。', ['api-gateway']),
   fact('kubernetes', 'Kubernetes 单节点', '基础设施', 'Kubernetes · containerd', 'ready',
     '单节点集群承载业务与基础组件；控制平面包括 API Server、Scheduler、Controller Manager 与 kube-proxy，不具备多节点高可用。',
     '实际核对 1 个节点、19 个 Pod，全部 Running 且容器就绪，0 Pending；运行时 containerd。Running 不等于业务链路验收。', ['kubernetes']),
@@ -143,4 +181,30 @@ export const technicalFlows: TechnicalFlow[] = [
   edge('mcp-api', 'sso-mcp', 'sso-hub', '业务 API', 'source'),
   edge('wiki-workspace', 'llmwiki', 'wiki-data', '独立工作空间', 'source'),
   edge('case-storage', 'case-management', 'case-data', '独立数据依赖', 'source'),
+  edge('homepage-hosting', 'apisix', 'homepage', 'HTTPS · 官网 /', 'planned'),
+  edge('homepage-app', 'homepage', 'client-integration', 'Navigation → /app', 'planned'),
+  edge('app-pwa', 'client-integration', 'pwa-shell', '手机 / 电脑安装', 'planned'),
+  edge('app-local-data', 'client-integration', 'browser-indexeddb', '会话 · 记忆 · 任务', 'planned'),
+  edge('pwa-cache', 'pwa-shell', 'browser-cache', '应用壳 · 离线资源', 'planned'),
+  edge('gpu-public-api', 'apisix', 'gpu-api', '统一 GPU API 入口', 'planned'),
+  edge('gpu-api-tunnel', 'gpu-api', 'ssh-tunnel', '访问主机映射端口', 'planned'),
+  edge('gpu-tunnel-session', 'gpu-compute', 'ssh-tunnel', '建立 SSH -R → 主服务器', 'planned', 'GPU 主动连接主服务器建立隧道；与业务 API 请求方向不同。'),
+  edge('gpu-host-tts', 'gpu-compute', 'gpu-tts', '承载 TTS', 'planned'),
+  edge('gpu-host-video', 'gpu-compute', 'gpu-video', '承载视频生成', 'planned'),
+  edge('gpu-host-modeling', 'gpu-compute', 'gpu-modeling', '承载建模', 'planned'),
+  edge('tunnel-tts', 'ssh-tunnel', 'gpu-tts', '映射 → TTS API', 'planned'),
+  edge('tunnel-video', 'ssh-tunnel', 'gpu-video', '映射 → 视频 API', 'planned'),
+  edge('tunnel-modeling', 'ssh-tunnel', 'gpu-modeling', '映射 → 建模 API', 'planned'),
+  edge('app-gpu-api', 'client-integration', 'apisix', 'HTTPS · 生成请求', 'planned', '/app 仅调用主服务器 HTTPS 入口，不携带 SSH 凭据或直连 GPU 端口。'),
+]
+
+export const deploymentFactIds = [
+  'homepage', 'client-integration', 'pwa-shell', 'browser-indexeddb', 'browser-cache',
+  'kubernetes', 'apisix', 'mem-gateway', 'sso-identity', 'mem-postgres', 'sso-postgres', 'local-storage',
+  'gpu-api', 'ssh-tunnel', 'gpu-compute', 'gpu-tts', 'gpu-video', 'gpu-modeling',
+]
+
+export const technicalDomains = [
+  { id: 'main-server', label: '主服务器 · Kubernetes / API / SSH 跳板', members: [...technicalFacts.filter(item => item.runtime === 'ready').map(item => item.id), 'homepage', 'gpu-api', 'ssh-tunnel'] },
+  { id: 'gpu-server', label: 'GPU 服务器 · 独立计算域 · 规划未核验', members: ['gpu-compute', 'gpu-tts', 'gpu-video', 'gpu-modeling'] },
 ]

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { runtimeSnapshot, technicalFacts, technicalFlows } from '../src/technical-architecture.ts'
+import { deploymentFactIds, runtimeSnapshot, technicalDomains, technicalFacts, technicalFlows } from '../src/technical-architecture.ts'
 import { layoutGraph } from '../src/graph-layout.ts'
 
 test('technical facts and relationships have unique IDs and complete evidence', () => {
@@ -68,10 +68,58 @@ test('infrastructure is observed ready without claiming certificate issuance or 
 
 test('the full technical topology lays out every component and routes every edge', async () => {
   const sizes = Object.fromEntries(technicalFacts.map(fact => [fact.id, { width: 270, height: 142 }]))
-  const layout = await layoutGraph(technicalFacts, technicalFlows, sizes)
+  const layout = await layoutGraph(technicalFacts, technicalFlows, sizes, technicalDomains)
   assert.equal(Object.keys(layout.positions).length, technicalFacts.length)
   assert.equal(Object.keys(layout.routes).length, technicalFlows.length)
   for (const fact of technicalFacts) {
     assert.ok(Number.isFinite(layout.positions[fact.id].x) && Number.isFinite(layout.positions[fact.id].y))
   }
+  for (const domain of technicalDomains) {
+    const bounds = layout.groups[domain.id]
+    assert.ok(bounds, domain.id)
+    for (const id of domain.members) {
+      const point = layout.positions[id]
+      assert.ok(point.x >= bounds.x + 30 && point.y >= bounds.y + 70, id)
+      assert.ok(point.x + sizes[id].width <= bounds.x + bounds.width && point.y + sizes[id].height <= bounds.y + bounds.height, id)
+    }
+  }
+  const main = layout.groups['main-server']
+  const gpu = layout.groups['gpu-server']
+  assert.ok(main.x + main.width <= gpu.x || gpu.x + gpu.width <= main.x || main.y + main.height <= gpu.y || gpu.y + gpu.height <= main.y)
+  for (const flow of technicalFlows) {
+    const route = layout.routes[flow.id]
+    const source = layout.positions[flow.source]
+    const target = layout.positions[flow.target]
+    assert.ok(Math.abs(route[0].x - source.x - 270) < 1 && Math.abs(route[0].y - source.y - 71) < 1, flow.id)
+    assert.ok(Math.abs(route.at(-1)!.x - target.x) < 1 && Math.abs(route.at(-1)!.y - target.y - 71) < 1, flow.id)
+  }
+})
+
+test('GPU domains and browser layers are plans, not fabricated runtime evidence', () => {
+  for (const id of deploymentFactIds) {
+    const fact = technicalFacts.find(value => value.id === id)!
+    assert.ok(fact, id)
+    if (fact.runtime === 'ready') continue
+    assert.equal(fact.runtime, 'planned', id)
+    assert.equal(fact.state, 'planned', id)
+    assert.ok(fact.sources.some(source => source.label.includes('2026-11-04')), id)
+  }
+  const main = technicalDomains.find(domain => domain.id === 'main-server')!
+  const gpu = technicalDomains.find(domain => domain.id === 'gpu-server')!
+  assert.ok(main.members.includes('kubernetes') && main.members.includes('ssh-tunnel'))
+  assert.ok(!gpu.members.includes('kubernetes'))
+  for (const id of ['client-integration', 'pwa-shell', 'browser-indexeddb', 'browser-cache']) {
+    assert.ok(!main.members.includes(id) && !gpu.members.includes(id), id)
+  }
+  for (const [source, target] of [
+    ['homepage', 'client-integration'], ['client-integration', 'pwa-shell'],
+    ['client-integration', 'browser-indexeddb'], ['pwa-shell', 'browser-cache'],
+    ['gpu-compute', 'ssh-tunnel'], ['apisix', 'gpu-api'], ['gpu-api', 'ssh-tunnel'],
+    ...['gpu-tts', 'gpu-video', 'gpu-modeling'].map(id => ['ssh-tunnel', id]),
+  ]) {
+    assert.equal(technicalFlows.find(flow => flow.source === source && flow.target === target)!.evidence, 'planned')
+  }
+  assert.match(technicalFacts.find(fact => fact.id === 'ssh-tunnel')!.detail, /GPU → 主服务器/)
+  assert.match(technicalFacts.find(fact => fact.id === 'gpu-api')!.detail, /localhost/)
+  assert.match(technicalFacts.find(fact => fact.id === 'browser-indexeddb')!.detail, /不是服务端数据库/)
 })

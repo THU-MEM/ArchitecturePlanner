@@ -148,6 +148,9 @@ td small { display: block; max-width: 300px; color: var(--muted); font-size: 11p
 .current-legend .planned { color: #765921; }
 .current-map { height: 660px; background: #f4f8fa; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .current-map .react-flow__node-project { width: 270px; height: 142px; padding: 0; border: 0; background: none; }
+.current-map .react-flow__node-domain { pointer-events: none; }
+.technical-domain-frame { width: 100%; height: 100%; border: 2px dashed #718592; border-radius: 12px; background: #e8eff533; padding: 20px 24px; color: #28485e; }
+.technical-domain-frame strong { font-size: 20px; font-weight: 600; }
 .current-picker { display: flex; align-items: center; gap: 14px; padding: 0 23px 18px; font-size: 12px; }
 .current-picker select { width: auto; max-width: 100%; min-width: 0; }
 .project-node { width: 100%; height: 142px; padding: 0; text-align: left; border-color: #aabecb; background: #fff; color: #213c51; border-radius: 7px; display: flex; flex-direction: column; overflow: hidden; pointer-events: auto; }

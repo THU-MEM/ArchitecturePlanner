@@ -3,7 +3,7 @@ import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from '@
 import type { Node, NodeProps, ReactFlowInstance } from '@xyflow/react'
 import type { Plan } from './plan.ts'
 import { implementationStates, projectFacts } from './current-architecture.ts'
-import { runtimeSnapshot, runtimeStates, technicalFacts, technicalFlows } from './technical-architecture.ts'
+import { deploymentFactIds, runtimeSnapshot, runtimeStates, technicalDomains, technicalFacts, technicalFlows } from './technical-architecture.ts'
 import type { TechnicalFact } from './technical-architecture.ts'
 import { layoutGraph } from './graph-layout.ts'
 import type { GraphLayout } from './graph-layout.ts'
@@ -13,6 +13,12 @@ import Icon from './Icon.tsx'
 import { componentIcons, uiIcon } from './icons.ts'
 
 type ProjectNode = Node<{ fact: TechnicalFact; selected: boolean; onSelect: (id: string) => void }, 'project'>
+type DomainNode = Node<{ label: string }, 'domain'>
+type TechnicalNode = ProjectNode | DomainNode
+
+function DomainFrame({ data }: NodeProps<DomainNode>) {
+  return <div className="technical-domain-frame"><strong>{data.label}</strong></div>
+}
 
 function ProjectNodeCard({ data }: NodeProps<ProjectNode>) {
   const { fact, selected, onSelect } = data
@@ -30,7 +36,7 @@ function ProjectNodeCard({ data }: NodeProps<ProjectNode>) {
   </>
 }
 
-const nodeTypes = { project: ProjectNodeCard }
+const nodeTypes = { project: ProjectNodeCard, domain: DomainFrame }
 const edgeTypes = { dependency: DependencyConnector }
 const sizes = Object.fromEntries(technicalFacts.map(fact => [fact.id, { width: 270, height: 142 }]))
 
@@ -47,13 +53,13 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   plan: Plan; onComponent: (id: string) => void; onModule: (id: string) => void
 }) {
   const [selected, setSelected] = useState('')
-  const [scope, setScope] = useState('runtime')
+  const [scope, setScope] = useState('deployment')
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<{ key: string; layout: GraphLayout | null; error: string } | null>(null)
   const [fittedKey, setFittedKey] = useState('')
-  const flowRef = useRef<ReactFlowInstance<ProjectNode, DependencyEdge> | null>(null)
+  const flowRef = useRef<ReactFlowInstance<TechnicalNode, DependencyEdge> | null>(null)
   const mapRef = useRef<HTMLDivElement>(null)
-  const facts = technicalFacts.filter(item => scope === 'all' || (scope === 'runtime' ? item.runtime === 'ready' || item.runtime === 'blocked' : item.runtime !== 'ready' && item.runtime !== 'blocked'))
+  const facts = technicalFacts.filter(item => scope === 'all' || (scope === 'deployment' ? deploymentFactIds.includes(item.id) : scope === 'runtime' ? item.runtime === 'ready' || item.runtime === 'blocked' : item.runtime !== 'ready' && item.runtime !== 'blocked'))
   const flows = technicalFlows.filter(flow => facts.some(item => item.id === flow.source) && facts.some(item => item.id === flow.target))
   const layoutInput = JSON.stringify({ modules: facts.map(({ id }) => ({ id })), relationships: flows.map(({ id, source, target }) => ({ id, source, target })) })
   const layoutKey = `${attempt}:${layoutInput}`
@@ -65,7 +71,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   useEffect(() => {
     let cancelled = false
     const input: { modules: { id: string }[]; relationships: Plan['relationships'] } = JSON.parse(layoutInput)
-    void layoutGraph(input.modules, input.relationships, sizes).then(value => {
+    void layoutGraph(input.modules, input.relationships, sizes, technicalDomains).then(value => {
       if (!cancelled) setResult({ key: layoutKey, layout: value, error: '' })
     }).catch((error: unknown) => {
       if (!cancelled) setResult({ key: layoutKey, layout: null, error: `技术架构自动布局失败：${error instanceof Error ? error.message : String(error)}。请重新布局重试。` })
@@ -85,14 +91,25 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
     return () => { cancelled = true; cancelAnimationFrame(frame) }
   }, [layout, layoutKey])
   function select(id: string) { setSelected(current => current === id ? '' : id) }
-  const nodes: ProjectNode[] = layout ? facts.map(item => ({
+  const nodes: TechnicalNode[] = layout ? [
+    ...technicalDomains.flatMap(domain => {
+      const bounds = layout.groups[domain.id]
+      return bounds ? [{
+        id: domain.id, type: 'domain' as const, position: { x: bounds.x, y: bounds.y },
+        style: { width: bounds.width, height: bounds.height }, data: { label: domain.label },
+        zIndex: -1, draggable: false, selectable: false, focusable: false, deletable: false,
+        domAttributes: { ...{ 'data-domain': domain.id }, 'aria-label': domain.label },
+      }] : []
+    }),
+    ...facts.map(item => ({
     id: item.id, type: 'project', position: layout.positions[item.id],
     draggable: false, deletable: false, selectable: false, focusable: false,
     className: [upstream.has(item.id) && 'node-upstream', downstream.has(item.id) && 'node-downstream', fact && item.id !== selected && !upstream.has(item.id) && !downstream.has(item.id) && 'node-dimmed'].filter(Boolean).join(' '),
     zIndex: selected === item.id ? 3 : upstream.has(item.id) || downstream.has(item.id) ? 2 : 0,
     domAttributes: { ...{ 'data-project': item.id, 'data-runtime': item.runtime }, title: item.observation },
     data: { fact: item, selected: selected === item.id, onSelect: select },
-  })) : []
+  } satisfies ProjectNode)),
+  ] : []
   const edges: DependencyEdge[] = layout ? flows.map(flow => {
     const color = fact && flow.target === selected ? '#2167ad' : fact && flow.source === selected ? '#a34d12' : '#718592'
     return {
@@ -116,7 +133,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
   return <section className="current-architecture" aria-label="当前项目架构">
     <p className="runtime-summary">SSH 核对：{runtimeSnapshot.inspectedAt} · {runtimeSnapshot.nodes} 节点 / {runtimeSnapshot.pods} Pod · {runtimeSnapshot.running} Running / {runtimeSnapshot.pending} Pending · 只读快照，非实时监控 · <span>源码已实现 ≠ 生产已上线</span></p>
     <div className="technical-toolbar">
-    <label>范围<select aria-label="技术架构范围" value={scope} onChange={event => { setScope(event.target.value); setSelected('') }}><option value="all">全部技术组件</option><option value="runtime">现场已部署</option><option value="source">源码与待接入</option></select></label>
+    <label>范围<select aria-label="技术架构范围" value={scope} onChange={event => { setScope(event.target.value); setSelected('') }}><option value="deployment">部署域与用户入口</option><option value="all">全部技术组件</option><option value="runtime">现场已部署</option><option value="source">源码与待接入</option></select></label>
     <label className="current-picker">项目组件<select value={selected} disabled={pending} onChange={event => inspect(event.target.value)}><option value="">未选中</option>{facts.map(item => <option key={item.id} value={item.id}>{item.project} · {item.name}</option>)}</select></label>
     <button type="button" disabled={pending && !result?.error} onClick={() => setAttempt(value => value + 1)}>重新布局</button>
     <button type="button" disabled={pending} onClick={() => void flowRef.current?.fitView({ padding: 0.12, minZoom: 0.04 })}>适应全图</button>
@@ -125,7 +142,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
     {result?.key === layoutKey && result.error && <p className="error" role="alert">{result.error}</p>}
     {pending && !result?.error && <p className="technical-layout-status" role="status">正在自动布局…</p>}
     <div className="technical-body"><div className="current-map" ref={mapRef}>
-      <ReactFlow<ProjectNode, DependencyEdge> nodes={nodes} nodeTypes={nodeTypes} edges={edges} edgeTypes={edgeTypes} onInit={instance => { flowRef.current = instance }} onPaneClick={() => setSelected('')} minZoom={0.04} maxZoom={1.5}
+      <ReactFlow<TechnicalNode, DependencyEdge> nodes={nodes} nodeTypes={nodeTypes} edges={edges} edgeTypes={edgeTypes} onInit={instance => { flowRef.current = instance }} onPaneClick={() => setSelected('')} minZoom={0.04} maxZoom={1.5}
         nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} deleteKeyCode={null} proOptions={{ hideAttribution: false }}>
         <Background gap={24} color="#d8e3e9" /><Controls showInteractive={false} />
       </ReactFlow>
@@ -139,7 +156,7 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
       <div className="technical-dependencies">{(['upstream', 'downstream'] as const).map(direction => <section key={direction}><h4>{direction === 'upstream' ? '上游 → 当前' : '当前 → 下游'}</h4>
         {flows.filter(flow => direction === 'upstream' ? flow.target === selected : flow.source === selected).map(flow => {
           const other = technicalFacts.find(item => item.id === (direction === 'upstream' ? flow.source : flow.target))!
-          return <button type="button" className={`technical-${direction}`} key={flow.id} onClick={() => inspect(other.id)}>{other.name}<small>{flow.label} · {flow.evidence === 'observed' ? '现场资源' : flow.evidence === 'source' ? '源码 / 模板' : '待接入'}</small></button>
+          return <button type="button" className={`technical-${direction}`} key={flow.id} title={flow.detail} onClick={() => inspect(other.id)}>{other.name}<small>{flow.label} · {flow.evidence === 'observed' ? '现场资源' : flow.evidence === 'source' ? '源码 / 模板' : '待接入'}</small></button>
         })}
         {!flows.some(flow => direction === 'upstream' ? flow.target === selected : flow.source === selected) && <p className="muted">无已记录关系</p>}
       </section>)}</div>
@@ -151,7 +168,13 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
         <p>SSO 与独立业务依据 AI-MEM 源码；MEM-AI 已通过子模块引用。资源就绪不等于业务验收，集群未见不代表其他机器未运行。规划台未接入 SSO；owner 不是登录账号或权限。</p>
       </details>
       </> : <><h3>技术组件详情</h3><p>点击卡片查看运行状态、来源与连接；再次点击取消选中。</p>
-        {scope !== 'source' && <section className="technical-dependencies" aria-label="基础设施现场证据">
+        {scope === 'deployment' && <section className="technical-dependencies" aria-label="目标部署与入口">
+          <h4>现有基础上的目标架构</h4>
+          <p>虚线框是主服务器与 GPU 服务器的部署边界，不代表已运行；框内卡片状态与连线证据分别标注。用户设备的 /app、PWA 与本地存储位于服务器域外。</p>
+          {['homepage', 'ssh-tunnel', 'gpu-compute', 'browser-indexeddb'].map(id => <button type="button" key={id} disabled={pending} onClick={() => inspect(id)}>{technicalFacts.find(item => item.id === id)!.name}</button>)}
+          <p>GPU → 主服务器建立 SSH -R；请求经主服务器 API → 隧道映射 → GPU 模型。新增目标尚未做现场核验。</p>
+        </section>}
+        {(scope === 'runtime' || scope === 'all') && <section className="technical-dependencies" aria-label="基础设施现场证据">
           <h4>基础设施 · 现场已运行</h4>
           {['cert-manager', 'coredns', 'metrics', 'calico'].map(id => {
             const item = technicalFacts.find(value => value.id === id)!
