@@ -98,7 +98,8 @@ export default function CurrentArchitecture({ plan, onComponent, onModule }: {
         id: domain.id, type: 'domain' as const, position: { x: bounds.x, y: bounds.y },
         style: { width: bounds.width, height: bounds.height }, data: { label: domain.label },
         zIndex: -1, draggable: false, selectable: false, focusable: false, deletable: false,
-        domAttributes: { ...{ 'data-domain': domain.id }, 'aria-label': domain.label },
+        ariaLabel: domain.label,
+        domAttributes: { ...{ 'data-domain': domain.id }, title: domain.label },
       }] : []
     }),
     ...facts.map(item => ({

@@ -168,6 +168,7 @@ export default function Canvas({ plan, visible, selected, onSelect, onChange }: 
         setLayoutState(current => current?.value ? ({
           ...current,
           value: {
+            ...current.value,
             positions: { ...current.value.positions, [node.id]: node.position },
             routes: Object.fromEntries(Object.entries(current.value.routes).filter(([id]) => !availableEdges.some(edge => edge.id === id && (edge.source === node.id || edge.target === node.id)))),
           },
