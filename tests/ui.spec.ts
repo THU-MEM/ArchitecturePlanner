@@ -8,6 +8,51 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/src/seed-plan.json', route => route.fulfill({ json: seed }))
 })
 
+test('active view persists across reloads for every tab and internal navigation', async ({ page }) => {
+  test.setTimeout(60_000)
+  await page.goto('./')
+  const navigation = page.getByRole('navigation', { name: '规划视图' })
+  await expect(navigation.getByRole('button', { name: '业务架构', exact: true })).toHaveAttribute('aria-current', 'page')
+  for (const tab of ['技术架构', '架构画布', '分工清单', '技术组件', '团队成员', '原始架构', '业务架构']) {
+    await navigation.getByRole('button', { name: tab, exact: true }).click()
+    await page.reload()
+    await expect(navigation.getByRole('button', { name: tab, exact: true })).toHaveAttribute('aria-current', 'page')
+    if (tab === '架构画布') await expect(page.getByTestId('toolbar-rectangle')).toBeVisible({ timeout: 60_000 })
+  }
+  await page.getByRole('button', { name: '添加团队成员', exact: true }).click()
+  await page.reload()
+  await expect(navigation.getByRole('button', { name: '团队成员', exact: true })).toHaveAttribute('aria-current', 'page')
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('architecture-planner.drawing.v1')!).elements)).toEqual([])
+})
+
+test('unknown saved tabs fall back to business architecture and can be replaced', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('architecture-planner.active-tab.v1')) localStorage.setItem('architecture-planner.active-tab.v1', 'removed-tab')
+  })
+  await page.goto('./')
+  const navigation = page.getByRole('navigation', { name: '规划视图' })
+  await expect(navigation.getByRole('button', { name: '业务架构', exact: true })).toHaveAttribute('aria-current', 'page')
+  await navigation.getByRole('button', { name: '团队成员', exact: true }).click()
+  await page.reload()
+  await expect(navigation.getByRole('button', { name: '团队成员', exact: true })).toHaveAttribute('aria-current', 'page')
+})
+
+test('failed tab persistence reports an error without blocking navigation', async ({ page }) => {
+  await page.addInitScript(() => {
+    const setItem = Storage.prototype.setItem
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'architecture-planner.active-tab.v1') throw new DOMException('Storage blocked', 'SecurityError')
+      return setItem.call(this, key, value)
+    }
+  })
+  await page.goto('./')
+  const navigation = page.getByRole('navigation', { name: '规划视图' })
+  await navigation.getByRole('button', { name: '团队成员', exact: true }).click()
+  await expect(navigation.getByRole('button', { name: '团队成员', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('alert')).toContainText('无法记住当前 Tab')
+})
+
 test('configured GitHub participants are immediately available and can own modules and components', async ({ page }) => {
   await page.goto('./')
   await page.getByRole('button', { name: '团队成员', exact: true }).click()
@@ -106,6 +151,7 @@ test('local initials avatars identify participants and follow applied module and
   await expect(tile.getByRole('img', { name: '主 owner example-helper 的头像', exact: true })).toHaveAttribute('src', helperSource!)
   await page.reload()
   await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
+  await page.getByRole('button', { name: '业务架构', exact: true }).click()
   await expect(node.getByRole('img', { name: '主 owner example-owner 的头像', exact: true })).toHaveAttribute('src', ownerSource!)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByLabel('搜索模块').fill('M01')

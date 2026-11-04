@@ -14,11 +14,21 @@ import { githubProfileUrl, mergeGitHubParticipants } from './participants.ts'
 import './App.css'
 
 const storageKey = 'architecture-planner.plan.v1'
+const tabStorageKey = 'architecture-planner.active-tab.v1'
 const githubEditUrl = 'https://github.com/THU-MEM/ArchitecturePlanner/edit/main/src/seed-plan.json'
 const tabs = ['业务架构', '技术架构', '架构画布', '分工清单', '技术组件', '团队成员', '原始架构'] as const
 type Tab = typeof tabs[number]
 const tabIcons = ['canvas', 'layer', 'canvas', 'list', 'technology', 'users', 'original']
 const participants: unknown = JSON.parse(import.meta.env.VITE_GITHUB_PARTICIPANTS ?? '[]')
+
+function readTab(): { tab: Tab; error: string } {
+  try {
+    const saved = localStorage.getItem(tabStorageKey)
+    return { tab: tabs.find(item => item === saved) ?? tabs[0], error: '' }
+  } catch (error) {
+    return { tab: tabs[0], error: `无法读取上次打开的视图：${error instanceof Error ? error.message : String(error)}。当前展示业务架构。` }
+  }
+}
 
 function readDraft() {
   try {
@@ -152,16 +162,17 @@ export default function App() {
 
 function Planner({ published }: { published: Plan }) {
   const [initial] = useState(readDraft)
+  const [initialTab] = useState(readTab)
   const [savedDraft, setSavedDraft] = useState(initial.draft)
   const [plan, setPlan] = useState(published)
-  const [tab, setTab] = useState<Tab>('业务架构')
+  const [tab, setActiveTab] = useState<Tab>(initialTab.tab)
   const [query, setQuery] = useState('')
   const [layer, setLayer] = useState('')
   const [ownerFilter, setOwnerFilter] = useState('')
   const [selected, setSelected] = useState('M01')
   const [selectedComponent, setSelectedComponent] = useState('workspace')
   const [dirty, setDirty] = useState(false)
-  const [error, setError] = useState(initial.error)
+  const [error, setError] = useState([initial.error, initialTab.error].filter(Boolean).join(' '))
   const [notice, setNotice] = useState('')
   const [personName, setPersonName] = useState('')
   const [submissionOpen, setSubmissionOpen] = useState(false)
@@ -170,6 +181,14 @@ function Planner({ published }: { published: Plan }) {
   const [pendingImport, setPendingImport] = useState<Plan | null>(null)
   const [localSaved, setLocalSaved] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  function setTab(next: Tab) {
+    setActiveTab(next)
+    try {
+      localStorage.setItem(tabStorageKey, next)
+    } catch (error) {
+      setError(`视图已切换，但无法记住当前 Tab：${error instanceof Error ? error.message : String(error)}。刷新后可能回到上次保存的视图。`)
+    }
+  }
   function discardSavedDraft() {
     try {
       localStorage.removeItem(storageKey)
