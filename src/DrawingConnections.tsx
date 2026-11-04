@@ -10,18 +10,16 @@ type Drag = Start & { pointerId: number; point: Point }
 type ArrowStyle = Partial<Pick<ExcalidrawArrowElement, 'strokeStyle' | 'startArrowhead' | 'endArrowhead'>>
 
 export default function DrawingConnections({ api, onError }: {
-  api: ExcalidrawImperativeAPI | null
+  api: ExcalidrawImperativeAPI
   onError: (message: string) => void
 }) {
-  const [view, setView] = useState<{ elements: readonly ExcalidrawElement[]; state: AppState } | null>(null)
+  const [view, setView] = useState<{ elements: readonly ExcalidrawElement[]; state: AppState }>(() => ({ elements: api.getSceneElements(), state: api.getAppState() }))
   const [drag, setDrag] = useState<Drag | null>(null)
   const [keyboardStart, setKeyboardStart] = useState<Start | null>(null)
   const [keyboardTarget, setKeyboardTarget] = useState('')
   const markerId = useId()
 
   useEffect(() => {
-    if (!api) return
-    setView({ elements: api.getSceneElements(), state: api.getAppState() })
     return api.onChange((elements, state) => setView({ elements, state }))
   }, [api])
 
@@ -39,7 +37,6 @@ export default function DrawingConnections({ api, onError }: {
     return () => { window.removeEventListener('keydown', onKey, true); window.removeEventListener('blur', cancel) }
   }, [drag, keyboardStart])
 
-  if (!api || !view) return null
   const { elements, state } = view
   const selected = elements.filter(element => state.selectedElementIds[element.id] && !element.isDeleted)
   const component = selected.length === 1 && isConnectable(selected[0]) && state.activeTool.type === 'selection'
@@ -57,7 +54,6 @@ export default function DrawingConnections({ api, onError }: {
     return `${name} ${elements.filter(isConnectable).findIndex(item => item.id === element.id) + 1}`
   }
   function createConnection(start: Start, targetId: string, targetSide?: ConnectionSide) {
-    if (!api) return
     const previous = api.getSceneElementsIncludingDeleted()
     const source = previous.find(element => element.id === start.sourceId && isConnectable(element))
     const target = previous.find(element => element.id === targetId && isConnectable(element))
@@ -73,8 +69,11 @@ export default function DrawingConnections({ api, onError }: {
         elbowed: true, startArrowhead: null, endArrowhead: 'arrow', roughness: 0,
         strokeColor: '#233d51', strokeWidth: 2, strokeStyle: 'solid', customData: { architectureConnector: true },
       } satisfies Partial<ExcalidrawArrowElement>
-      const [created] = convertToExcalidrawElements([definition])
-      if (created.type !== 'arrow') throw new Error('编辑器未创建有效箭头')
+      const [element] = convertToExcalidrawElements([definition])
+      if (element.type !== 'arrow') throw new Error('编辑器未创建有效箭头')
+      const corner = structuredClone(element.points[1])
+      corner[1] = element.points[0][1]
+      const created = newElementWith(element, { points: [element.points[0], corner, element.points[1]] })
       const next = previous.map(element => element.id === source.id || element.id === target.id
         ? newElementWith(element, { boundElements: [...(element.boundElements ?? []), { type: 'arrow', id: created.id }] })
         : element)
@@ -85,8 +84,11 @@ export default function DrawingConnections({ api, onError }: {
       const startBinding: FixedPointBinding = { elementId: source.id, focus: 0, gap: 0, fixedPoint: from.fixedPoint }
       const endBinding: FixedPointBinding = { elementId: target.id, focus: 0, gap: 0, fixedPoint: to.fixedPoint }
       mutateElement(registered, { startBinding, endBinding }, false)
+      const routed = api.getSceneElementsIncludingDeleted()
+      // Commit the routed result against the original scene, not the uncommitted registration.
+      api.updateScene({ elements: previous, captureUpdate: CaptureUpdateAction.EVENTUALLY })
       api.updateScene({
-        elements: api.getSceneElementsIncludingDeleted(),
+        elements: routed,
         appState: { selectedElementIds: { [created.id]: true } },
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       })
@@ -98,7 +100,7 @@ export default function DrawingConnections({ api, onError }: {
     setKeyboardStart(null)
   }
   function changeArrow(changes: ArrowStyle) {
-    if (!api || !arrow) return
+    if (!arrow) return
     api.updateScene({
       elements: api.getSceneElementsIncludingDeleted().map(element => element.id === arrow.id && element.type === 'arrow' ? newElementWith(element, changes) : element),
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,

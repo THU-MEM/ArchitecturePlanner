@@ -234,7 +234,7 @@ export default function ArchitectureCanvas() {
             <MainMenu.DefaultItems.ChangeCanvasBackground />
           </MainMenu>
         </Excalidraw>
-        <DrawingConnections api={api} onError={setError} />
+        {api && <DrawingConnections api={api} onError={setError} />}
       </div>
       {paletteOpen && <aside className="drawing-logos" id="drawing-logos" aria-label="技术 Logo 素材">
         <div className="section-title"><h3>技术 Logo</h3><button type="button" onClick={() => setPaletteOpen(false)} aria-label="关闭 Logo 素材">关闭</button></div>
