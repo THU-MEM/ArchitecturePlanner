@@ -451,6 +451,7 @@ test('compact banner and one-row navigation leave both canvases full-height with
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 740 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport)
     await page.goto('./')
+    await page.getByRole('navigation', { name: '规划视图' }).getByRole('button', { name: '业务架构', exact: true }).click()
     await expect(page.getByRole('button', { name: '重新布局', exact: true })).toBeEnabled()
     const navigation = page.getByRole('navigation', { name: '规划视图' })
     await expect(navigation.getByRole('button')).toHaveCount(7)

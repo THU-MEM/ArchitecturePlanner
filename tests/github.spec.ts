@@ -40,6 +40,8 @@ test('one click copies the complete edited JSON and opens the GitHub editor with
   expect(copied.components.find((component: { id: string }) => component.id === 'postgres').owners).toEqual([{ personId: 'github-202', role: 'primary' }])
   expect(writes).toEqual([])
   await page.goto('./')
+  await expect(page.getByRole('navigation', { name: '规划视图' }).getByRole('button', { name: '技术组件', exact: true })).toHaveAttribute('aria-current', 'page')
+  await page.getByRole('button', { name: '业务架构', exact: true }).click()
   await expect(page.getByLabel('模块名称')).toHaveValue('项目输入与目标建模')
   await page.getByRole('button', { name: '恢复本地草稿', exact: true }).click()
   await expect(page.getByLabel('模块名称')).toHaveValue('中文规划与分工')
