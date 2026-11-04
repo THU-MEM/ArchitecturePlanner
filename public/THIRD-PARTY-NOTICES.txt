@@ -62,6 +62,33 @@ visible in a given view.
 Additional SVG logos: Azure, Cloudflare, React and GitHub, from https://github.com/gilbarbara/logos (CC0-1.0).
 Additional UI icons from https://github.com/lucide-icons/lucide, under the ISC/Feather MIT notices above.
 
+Expanded drawing palette:
+135 distinct brand assets including the existing 12 local logos.
+Additional SVG Logos source (unmodified artwork):
+https://github.com/gilbarbara/logos/tree/22f03ffc4a652309d1fea4ade70f46e9e1d6602c
+License: CC0-1.0, LICENSE.txt at that revision.
+
+Alibaba Cloud brand mark: Simple Icons, CC0-1.0.
+https://github.com/simple-icons/simple-icons/blob/b45ca1f11d9d013a7c462944d90a049bc613ad4f/icons/alibabacloud.svg
+License:
+https://github.com/simple-icons/simple-icons/blob/b45ca1f11d9d013a7c462944d90a049bc613ad4f/LICENSE.md
+CC0 legal text: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+Modification: explicit brand-orange fill added to the monochrome SVG.
+
+72 Alibaba Cloud service ILLUSTRATIONS, NOT official product icons:
+ArchitecturePlanner compositions of the existing Lucide glyphs and product
+codes, with transparent backgrounds and dark-orange strokes/text. Lucide
+copyright and ISC/Feather MIT terms above apply to the underlying glyphs;
+original composition code is under this repository's MIT license.
+Product names identify architecture components only. No official Alibaba
+service artwork from unlicensed GitHub/Iconfont collections is included.
+The MIT license on a collection's tooling does not license excluded artwork.
+
+Asset selection, upstream revisions and search metadata:
+src/drawing-icon-library.json
+Integrity hashes for new local SVGs: src/drawing-icon-checksums.json
+Importer/composition tool: scripts/sync-drawing-icons.mjs
+
 DiceBear Core and Initials: https://github.com/dicebear/dicebear
 The Initials artwork is CC0-1.0: https://creativecommons.org/publicdomain/zero/1.0/
 The code is licensed under MIT:

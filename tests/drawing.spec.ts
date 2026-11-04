@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
-import { drawingStorageKey } from '../src/drawing-assets.ts'
+import { drawingLogos, drawingStorageKey } from '../src/drawing-assets.ts'
 import seed from './fixture.ts'
 
 type SceneElement = {
@@ -186,6 +186,7 @@ test('mobile canvas fills the viewport, searches and inserts logos while keeping
   expect(await stage.evaluate(element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight))).toBeLessThanOrEqual(1)
   expect((await stage.boundingBox())!.height).toBeGreaterThan(500)
   await page.getByRole('button', { name: '技术 Logo', exact: true }).click()
+  await page.getByLabel('素材分类', { exact: true }).selectOption('containers')
   await page.getByLabel('搜索 Logo', { exact: true }).fill('kubernetes')
   await expect(page.locator('.drawing-logo-grid button')).toHaveCount(1)
   await page.getByRole('button', { name: '插入 Kubernetes Logo', exact: true }).click()
@@ -199,6 +200,70 @@ test('mobile canvas fills the viewport, searches and inserts logos while keeping
   await page.setViewportSize({ width: 320, height: 740 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   expect(await stage.evaluate(element => Math.abs(element.getBoundingClientRect().bottom - window.innerHeight))).toBeLessThanOrEqual(1)
+})
+
+test('expanded SVG library filters Alibaba services, renders transparent assets and exports them alongside brand logos', async ({ page }) => {
+  test.setTimeout(60_000)
+  await page.goto('./')
+  await openDrawing(page)
+  const palette = page.getByRole('complementary', { name: '技术 Logo 素材' })
+  await expect(page.locator('.drawing-logo-grid button')).toHaveCount(drawingLogos.length)
+  await expect(page.locator('.drawing-logo-count')).toContainText(`${drawingLogos.length} / ${drawingLogos.length}`)
+  const assets = await page.evaluate(async paths => {
+    const results: { path: string; painted: boolean; transparentCorner: boolean }[] = []
+    for (let offset = 0; offset < paths.length; offset += 12) {
+      results.push(...await Promise.all(paths.slice(offset, offset + 12).map(async path => {
+        const image = new Image()
+        image.src = new URL(path, document.baseURI).href
+        await image.decode()
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 96
+        const context = canvas.getContext('2d')!
+        context.drawImage(image, 0, 0, 96, 96)
+        const pixels = context.getImageData(0, 0, 96, 96).data
+        return { path, painted: pixels.some((value, index) => index % 4 === 3 && value > 0), transparentCorner: pixels[3] === 0 }
+      })))
+    }
+    return results
+  }, drawingLogos.map(icon => icon.src))
+  expect(assets.filter(asset => !asset.painted)).toEqual([])
+  expect(assets.filter(asset => asset.path.includes('/aliyun-') && !asset.transparentCorner)).toEqual([])
+  await page.getByLabel('素材分类', { exact: true }).selectOption('alibaba')
+  await expect(palette).toContainText('非官方图标')
+  await page.getByLabel('搜索 Logo', { exact: true }).fill('aliyun 对象存储')
+  await expect(page.locator('.drawing-logo-grid button')).toHaveCount(1)
+  await expect(page.locator('.drawing-logo-grid small')).toHaveText('服务示意')
+  await page.getByRole('button', { name: '插入 阿里云 OSS · 对象存储 Logo', exact: true }).click()
+  await expect.poll(() => coloredScenePixels(page)).toBeGreaterThan(100)
+  await page.getByLabel('搜索 Logo', { exact: true }).fill('Qwen')
+  await expect(page.getByRole('button', { name: '插入 Qwen Logo', exact: true }).locator('small')).toHaveText('品牌 Logo')
+  const transfer = await page.evaluateHandle(() => new DataTransfer())
+  await page.getByRole('button', { name: '插入 Qwen Logo', exact: true }).dispatchEvent('dragstart', { dataTransfer: transfer })
+  const target = page.locator('.drawing-stage canvas.interactive')
+  const box = (await target.boundingBox())!
+  await target.dispatchEvent('drop', { dataTransfer: transfer, clientX: box.x + 360, clientY: box.y + 300 })
+  await expect(page.locator('.drawing-save-status')).toContainText('2 个元素')
+  await page.getByLabel('搜索 Logo', { exact: true }).fill('not-a-service')
+  await expect(palette).toContainText('没有匹配的 Logo')
+  await page.getByLabel('搜索 Logo', { exact: true }).fill('')
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/topology-drawing-library-desktop.png', animations: 'disabled' })
+  const png = await downloadBytes(page, '导出 PNG')
+  expect([...png.bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+  const backup = await downloadBytes(page, '下载画布文件')
+  expect(Object.keys(JSON.parse(backup.bytes.toString('utf8')).files)).toHaveLength(2)
+  await page.reload()
+  await openDrawing(page)
+  await expect(page.locator('.drawing-save-status')).toContainText('2 个元素')
+  await expect.poll(() => coloredScenePixels(page)).toBeGreaterThan(100)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByLabel('素材分类', { exact: true }).selectOption('alibaba')
+  await page.screenshot({ path: '.impeccable/review/topology-drawing-library-mobile.png', animations: 'disabled' })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.getByLabel('搜索 Logo', { exact: true }).fill('ECS')
+  await page.getByRole('button', { name: '插入 阿里云 ECS · 云服务器 Logo', exact: true }).click()
+  await expect(palette).toHaveCount(0)
+  await expect(page.locator('.drawing-save-status')).toContainText('3 个元素')
 })
 
 test('invalid imports and failed logo reads report errors without replacing the current drawing', async ({ page }) => {

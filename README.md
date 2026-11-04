@@ -20,13 +20,37 @@
 顶部第三个 Tab「架构画布」是独立的自由绘图工作区，不改变业务架构、技术快照或分工 JSON。
 
 - 使用内置工具绘制矩形、椭圆、箭头、线条、文字和自由画笔，支持移动、缩放、绑定箭头、撤销与重做。默认使用清晰的直线样式，也可调整笔画风格。
-- 打开「技术 Logo」，搜索并点击或拖入现有 SVG 素材。Logo 保留原色与宽高比，可移动、缩放，并与框图组合；手机使用点击插入。
+- 打开「技术 Logo」，按分类浏览或使用中英文名称、缩写和关键词搜索，再点击或拖入 SVG 素材；手机使用点击插入。现有 **207 项素材：135 个品牌 Logo、72 个阿里云服务示意图**，覆盖云平台、容器、数据库、消息、可观测、开发交付、AI 和安全。素材保留宽高比，可移动、缩放，并与框图组合。
 - 「导出 PNG」导出全部图形（不只是当前视口），保留画布背景与 Logo，最长边不超过 4096 像素。空画布不可导出。
 - 「下载画布文件」保存可继续编辑的 `.excalidraw` 文件；「导入画布文件」可恢复，已有内容时必须确认替换。导入上限 20 MiB。
 
 内容仅在当前浏览器自动保存，使用独立键 `architecture-planner.drawing.v1`，**不随规划提交、不自动上传，也不跨设备同步**。清理浏览器数据会丢失草稿，请下载文件备份。存储失败会明确提示，仍可编辑并下载备份；损坏草稿不会被静默覆盖，支持先下载原始内容再明确舍弃。画布按需加载，字体和技术 Logo 从本站提供，不接入协作服务器或 AI 服务。
 
 选型先比较许可与功能：采用 [Excalidraw React 组件](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/integration)（MIT，支持 React 19），复用成熟的自由绘图、图片与 [PNG 导出 API](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/utils/export)。React Flow（MIT）继续承担现有节点拓扑，不重复开发自由画笔；[tldraw 当前 SDK](https://tldraw.dev/community/license) 的生产使用需要许可证密钥，未选用。
+
+### SVG 素材来源与边界
+
+品牌素材选自 GitHub 上的 [SVG Logos](https://github.com/gilbarbara/logos) 和 [Simple Icons](https://github.com/simple-icons/simple-icons)（均为 CC0-1.0），保留原始品牌造型。新增素材固定上游 commit，清单、分类和搜索词见 [`drawing-icon-library.json`](src/drawing-icon-library.json)，新增文件的 SHA-256 见 [`drawing-icon-checksums.json`](src/drawing-icon-checksums.json)。维护者可用 `node scripts/sync-drawing-icons.mjs` 重新获取固定版本；使用已登录的 `gh`，不会在用户打开页面时访问 GitHub 或第三方图标 CDN。预览图片按需加载，不将全部 SVG 塞入 JavaScript。
+
+阿里云类别包括 Alibaba Cloud、Qwen、Ant Design 品牌，以及 ECS、ACK、ACR、FC、OSS、NAS、RDS、PolarDB、VPC、负载均衡、网关、SLS、ARMS、RAM、KMS、PAI、百炼等 72 个常见产品的**服务示意图**。后者由现有 Lucide 图形与产品缩写组合，透明背景、无外部图片或字体依赖，**不是阿里云官方产品图标，也不是完整产品目录**；素材按钮及分类说明会明确标记。原始 Logo 自带的有色造型属于品牌本身，不另加白色底板。
+
+研究过 [alibaba-sa/cloud-icons](https://github.com/alibaba-sa/cloud-icons)、[mcsrainbow/alibaba-cloud-icons](https://github.com/mcsrainbow/alibaba-cloud-icons) 和 [jinxiao/alibaba-cloud-icons](https://github.com/jinxiao/alibaba-cloud-icons)。前两者未提供明确的图形再分发许可，后者的 MIT 明确排除第三方图形，因此没有将这些官方服务图形复制进本仓库。取得适当授权后可替换对应示意图，不应把仓库代码许可当成图形许可。品牌与产品名仍归各自权利人；图标不代表已部署或获得品牌背书。
+
+### Excalidraw 已接能力与后续优化
+
+当前依赖的是标准 `@excalidraw/excalidraw` React 编辑器，不是完整的 excalidraw.com 网站或 Excalidraw+ 服务。组件没有 fork 或删改绘图内核，通过 ESM 按需引用导出，整个画布工作区延迟加载；实际产物由 Vite 拆包，不等于每个 npm 文件都进入首次下载。原生选择、多选、分组、对齐、图层、画框、自由画笔、文字、图片和绑定箭头由编辑器提供。本站隐藏重复的文件/导出菜单、主题切换和 AI 入口，提供自己的保存、导入、PNG 和 Logo 面板；字体从本站提供，协作与云存储后端没有接入。
+
+后续按实际收益建议优先做：
+
+| 优先级 | 优化 | 接入边界 |
+|---|---|---|
+| 高 | 可编辑 SVG、透明背景／选区／分辨率可选的导出 | 复用 `exportToSvg`、`exportToBlob`，补本站导出设置与测试 |
+| 高 | 私有组件库与架构模板 | 持久化原生 library items，复用整组“服务＋标签＋箭头”，不只单个 Logo |
+| 高 | 从业务／技术架构生成可编辑草图 | 将现有 ELK 坐标与拓扑转为原生 elements；只生成副本，不反写规划 |
+| 中 | 多画稿、版本恢复、自动保存节流 | 目前每次变更会同步序列化单一草稿；大图宜转 IndexedDB、防抖并在离开时可靠落盘 |
+| 后续 | 跨设备同步与多人协作 | 组件有 API 但不是开关即用，需另建鉴权、持久化、冲突合并与隐私边界 |
+
+上表是后续建议，除 SVG 素材库扩充外并未在本轮启用这些功能。Mermaid 或 AI 生成也需要额外解析／模型服务，不会因安装编辑器而自动获得。
 
 ## 数据与边界
 

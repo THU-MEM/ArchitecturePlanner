@@ -5,7 +5,7 @@ import {
 } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI, ExcalidrawInitialDataState, ExcalidrawProps } from '@excalidraw/excalidraw/types'
 import type { FileId } from '@excalidraw/excalidraw/element/types'
-import { drawingLogos, drawingStorageKey } from './drawing-assets.ts'
+import { drawingCategories, drawingLogos, drawingStorageKey, filterDrawingLogos } from './drawing-assets.ts'
 import type { IconReference } from './icons.ts'
 import Icon from './Icon.tsx'
 import '@excalidraw/excalidraw/index.css'
@@ -36,6 +36,7 @@ export default function ArchitectureCanvas() {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(() => window.innerWidth > 900)
   const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('')
   const [error, setError] = useState('')
   const [saveError, setSaveError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -189,7 +190,7 @@ export default function ArchitectureCanvas() {
   </section>
   if (!initialData) return <p className="drawing-loading" role="status">正在读取架构画布…</p>
 
-  const logos = drawingLogos.filter(icon => icon.label.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
+  const logos = filterDrawingLogos(search, category)
   return <section className="drawing-workspace" aria-label="自由架构画布">
     <div className="drawing-toolbar">
       <button type="button" aria-expanded={paletteOpen} aria-controls="drawing-logos" onClick={() => setPaletteOpen(value => !value)}>技术 Logo</button>
@@ -235,12 +236,20 @@ export default function ArchitectureCanvas() {
       </div>
       {paletteOpen && <aside className="drawing-logos" id="drawing-logos" aria-label="技术 Logo 素材">
         <div className="section-title"><h3>技术 Logo</h3><button type="button" onClick={() => setPaletteOpen(false)} aria-label="关闭 Logo 素材">关闭</button></div>
-        <p>点击插入，或拖到画布。可缩放、移动，与方块及箭头组合。</p>
-        <label>搜索 Logo<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="React、PostgreSQL…" /></label>
-        <div className="drawing-logo-grid">{logos.map(icon => <button type="button" key={icon.src} draggable={!busy} disabled={!api || busy} aria-label={`插入 ${icon.label} Logo`} title={`拖拽或点击插入 ${icon.label}`}
+        <p>点击或拖入画布，保留透明背景，可缩放、移动。</p>
+        <label>搜索 Logo<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="ECS、对象存储、PostgreSQL…" /></label>
+        <label className="drawing-category">素材分类<select value={category} onChange={event => setCategory(event.target.value)}>
+          <option value="">全部分类</option>
+          {Object.entries(drawingCategories).map(([id, name]) => <option key={id} value={id}>{name}（{drawingLogos.filter(icon => icon.category === id).length}）</option>)}
+        </select></label>
+        <div className="drawing-logo-count" role="status">{logos.length} / {drawingLogos.length} 项 · SVG</div>
+        {category === 'alibaba' && <p className="drawing-service-note">产品图为服务示意，非官方图标；品牌 Logo 单独标记。</p>}
+        <div className="drawing-logo-results">
+        <div className="drawing-logo-grid">{logos.map(icon => <button type="button" key={icon.src} draggable={!busy} disabled={!api || busy} aria-label={`插入 ${icon.label} Logo`} title={`${icon.label} · ${icon.kind === 'service' ? 'Lucide 服务示意，非官方图标' : '品牌 Logo'} · 拖拽或点击插入`}
           onDragStart={event => { event.dataTransfer.setData(logoDragType, icon.src); event.dataTransfer.effectAllowed = 'copy' }}
-          onClick={() => void insertLogo(icon)}><Icon icon={icon} decorative /><span>{icon.label}</span></button>)}</div>
+          onClick={() => void insertLogo(icon)}><Icon icon={icon} decorative loading="lazy" /><span>{icon.label}</span><small>{icon.kind === 'service' ? '服务示意' : '品牌 Logo'}</small></button>)}</div>
         {!logos.length && <p>没有匹配的 Logo，请换个关键词。</p>}
+        </div>
       </aside>}
     </div>
   </section>
