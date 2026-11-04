@@ -19,12 +19,12 @@ if (missing.length) throw new Error(`Unknown upstream logos: ${missing.join(', '
 
 const checksums = {}
 async function save(name, bytes) {
-  const svg = bytes.toString('utf8')
+  const svg = bytes.toString('utf8').replaceAll('\r\n', '\n')
   if (!/<svg\b/.test(svg) || !/\bviewBox=/.test(svg) || /<(?:script|foreignObject|image)\b|\bon\w+\s*=|(?:href|url)\s*[(=]\s*["']?https?:/i.test(svg)) {
     throw new Error(`Invalid or non-self-contained SVG: ${name}`)
   }
-  await writeFile(join(destination, name), bytes)
-  checksums[name] = createHash('sha256').update(bytes).digest('hex')
+  await writeFile(join(destination, name), svg)
+  checksums[name] = createHash('sha256').update(svg).digest('hex')
 }
 
 for (let offset = 0; offset < logos.length; offset += 6) {
