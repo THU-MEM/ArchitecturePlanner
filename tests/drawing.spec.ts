@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
-import { drawingCategories, drawingLogos, drawingStorageKey } from '../src/drawing-assets.ts'
+import { drawingCategories, drawingLogos, drawingStorageKey, filterDrawingLogos } from '../src/drawing-assets.ts'
 import seed from './fixture.ts'
 
 type SceneElement = {
@@ -403,7 +403,8 @@ test('SVG palette groups every asset by category and supports folding, searching
   await data.locator('.drawing-group-heading').click()
   await expect(data.getByRole('button', { name: '插入 PostgreSQL Logo', exact: true })).toBeVisible()
   await page.getByLabel('搜索 Logo', { exact: true }).fill('PostgreSQL')
-  await expect(groups).toHaveCount(1)
+  await expect(groups).toHaveCount(new Set(filterDrawingLogos('PostgreSQL').map(icon => icon.category)).size)
+  await expect(page.locator('.drawing-group-heading[aria-expanded="false"]')).toHaveCount(0)
   await expect(page.getByRole('button', { name: '插入 PostgreSQL Logo', exact: true })).toBeVisible()
   await page.getByLabel('搜索 Logo', { exact: true }).fill('')
   await page.getByRole('button', { name: '收起全部分组', exact: true }).click()
