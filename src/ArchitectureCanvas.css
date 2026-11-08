@@ -2,6 +2,8 @@
 .drawing-toolbar { display: flex; gap: 8px; align-items: center; padding: 6px 12px; overflow-x: auto; flex-shrink: 0; border-bottom: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: #85aab9 #edf3f6; }
 .drawing-toolbar > * { flex-shrink: 0; }
 .drawing-toolbar button { font-size: 12px; padding: 6px 10px; white-space: nowrap; }
+.drawing-toolbar button[aria-pressed="true"] { background: #e6f3f5; color: #105360; border-color: #176976; }
+.drawing-stage canvas.interactive { touch-action: none; }
 .drawing-save-status { margin-left: auto; color: var(--muted); font-size: 12px; }
 .drawing-body { display: flex; flex: 1; min-height: 0; position: relative; }
 .drawing-stage { flex: 1; min-width: 0; height: 100%; position: relative; isolation: isolate; }

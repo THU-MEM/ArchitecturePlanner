@@ -196,6 +196,90 @@ test('local SVG logos insert, drag, undo, persist and export as a nonempty PNG w
   expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
 })
 
+test('visible brush draws continuous mouse trajectories and preserves native tool switching, undo and export', async ({ page }) => {
+  await page.goto('./')
+  await openDrawing(page)
+  const brush = page.getByRole('button', { name: '画笔', exact: true })
+  await brush.click()
+  await expect(brush).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('toolbar-freedraw')).toBeChecked()
+  const box = (await page.locator('.drawing-stage').boundingBox())!
+  for (const offset of [0, 80]) {
+    await page.mouse.move(box.x + 340, box.y + 280 + offset)
+    await page.mouse.down()
+    for (const [x, y] of [[380, 250], [420, 310], [460, 260], [500, 300]]) {
+      await page.mouse.move(box.x + x, box.y + y + offset, { steps: 6 })
+    }
+    await page.mouse.up()
+  }
+  await expect.poll(async () => (await scene(page)).elements.length).toBe(2)
+  const strokes = (await scene(page)).elements
+  for (const stroke of strokes) {
+    expect(stroke.type).toBe('freedraw')
+    expect(stroke.points!.length).toBeGreaterThan(12)
+    expect(new Set(stroke.points!.map(point => point[1])).size).toBeGreaterThan(4)
+  }
+  await page.keyboard.press('Control+z')
+  await expect.poll(async () => (await scene(page)).elements.length).toBe(1)
+  await page.keyboard.press('Control+Shift+z')
+  await expect.poll(async () => (await scene(page)).elements.length).toBe(2)
+  await page.getByRole('button', { name: '选择', exact: true }).click()
+  await expect(brush).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByTestId('toolbar-selection')).toBeChecked()
+  await selectTool(page, 'freedraw')
+  await expect(brush).toHaveAttribute('aria-pressed', 'true')
+  const backup = JSON.parse((await downloadBytes(page, '下载画布文件')).bytes.toString('utf8'))
+  expect(backup.elements.map((element: SceneElement) => element.points)).toEqual(strokes.map(stroke => stroke.points))
+  expect([...((await downloadBytes(page, '导出 PNG')).bytes.subarray(0, 8))]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/topology-drawing-brush-desktop.png', animations: 'disabled' })
+  await page.reload()
+  await openDrawing(page)
+  await expect.poll(async () => (await scene(page)).elements.map(element => element.points)).toEqual(strokes.map(stroke => stroke.points))
+  expect(await page.evaluate(() => localStorage.getItem('architecture-planner.plan.v1'))).toBeNull()
+})
+
+test('touchscreen brush records finger and pen trajectories instead of scrolling the page', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  try {
+    const page = await context.newPage()
+    await page.route('**/src/seed-plan.json', route => route.fulfill({ json: seed }))
+    await page.goto('./')
+    await openDrawing(page)
+    await page.getByRole('button', { name: '技术 Logo', exact: true }).tap()
+    await expect(page.getByRole('complementary', { name: '技术 Logo 素材' })).toBeVisible()
+    await page.getByRole('button', { name: '画笔', exact: true }).tap()
+    await expect(page.getByRole('complementary', { name: '技术 Logo 素材' })).toHaveCount(0)
+    await expect(page.getByTestId('toolbar-freedraw')).toBeChecked()
+    const box = (await page.locator('.drawing-stage').boundingBox())!
+    const scroll = await page.evaluate(() => window.scrollY)
+    const session = await context.newCDPSession(page)
+    await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 70, y: box.y + 260 }] })
+    for (const [x, y] of [[90, 270], [120, 300], [150, 250], [180, 290], [210, 260], [240, 310]]) {
+      await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: box.y + y }] })
+    }
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await expect.poll(async () => (await scene(page)).elements.length).toBe(1)
+    const stroke = (await scene(page)).elements[0]
+    expect(stroke.type).toBe('freedraw')
+    expect(stroke.points!.length).toBeGreaterThan(4)
+    expect(new Set(stroke.points!.map(point => point[1])).size).toBeGreaterThan(3)
+    expect(await page.evaluate(() => window.scrollY)).toBe(scroll)
+    await session.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 70, y: box.y + 390, button: 'left', buttons: 1, clickCount: 1, pointerType: 'pen', force: 0.5 })
+    for (const [x, y] of [[100, 420], [140, 380], [180, 420], [230, 390]]) {
+      await session.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y: box.y + y, button: 'left', buttons: 1, pointerType: 'pen', force: 0.7 })
+    }
+    await session.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 230, y: box.y + 390, button: 'left', buttons: 0, clickCount: 1, pointerType: 'pen' })
+    await expect.poll(async () => (await scene(page)).elements.length).toBe(2)
+    expect((await scene(page)).elements[1].type).toBe('freedraw')
+    expect((await scene(page)).elements[1].points!.length).toBeGreaterThan(3)
+    await mkdir('.impeccable/review', { recursive: true })
+    await page.screenshot({ path: '.impeccable/review/topology-drawing-brush-touch.png', animations: 'disabled' })
+  } finally {
+    await context.close()
+  }
+})
+
 test('mobile canvas fills the viewport, searches and inserts logos while keeping navigation and PNG export reachable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('./')

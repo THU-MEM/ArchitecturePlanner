@@ -35,6 +35,7 @@ export default function ArchitectureCanvas() {
   const [loadError, setLoadError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null)
+  const [activeTool, setActiveTool] = useState('selection')
   const [paletteOpen, setPaletteOpen] = useState(() => window.innerWidth > 900)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -70,6 +71,7 @@ export default function ArchitectureCanvas() {
   }, [attempt])
 
   const onChange = useCallback<NonNullable<ExcalidrawProps['onChange']>>((elements, state, files) => {
+    setActiveTool(state.activeTool.type)
     setElementCount(elements.filter(element => !element.isDeleted).length)
     try {
       const json = serializeAsJSON(elements, state, files, 'local')
@@ -268,6 +270,15 @@ export default function ArchitectureCanvas() {
   const logos = filterDrawingLogos(search, category)
   return <section className="drawing-workspace" aria-label="自由架构画布">
     <div className="drawing-toolbar">
+      <button type="button" disabled={!api || busy} aria-pressed={activeTool === 'freedraw'} title="自由画笔：鼠标拖拽、手指或手写笔画轨迹（P）" onClick={() => {
+        api?.setActiveTool({ type: 'freedraw' })
+        if (window.innerWidth <= 900) setPaletteOpen(false)
+        stageRef.current?.querySelector<HTMLElement>('.excalidraw')?.focus()
+      }}>画笔</button>
+      <button type="button" disabled={!api || busy} aria-pressed={activeTool === 'selection'} title="选择、移动图形，退出画笔（V）" onClick={() => {
+        api?.setActiveTool({ type: 'selection' })
+        stageRef.current?.querySelector<HTMLElement>('.excalidraw')?.focus()
+      }}>选择</button>
       <button type="button" aria-expanded={paletteOpen} aria-controls="drawing-logos" onClick={() => setPaletteOpen(value => !value)}>技术 Logo</button>
       <button type="button" disabled={!api || busy} onClick={saveFile}>下载画布文件</button>
       <button type="button" disabled={!api || busy} onClick={() => fileRef.current?.click()}>导入画布文件</button>
