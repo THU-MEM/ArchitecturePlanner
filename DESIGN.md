@@ -67,4 +67,6 @@ Clipboard paste needs no extra canvas click after opening the drawing Tab. Image
 Put labeled Brush and Selection shortcuts first in the compact drawing action row, with pressed state synchronized to the native editor tool. Reuse native freehand trajectories instead of interpreting strokes as shapes. Mouse, finger and stylus drawing stay within the interactive canvas; touch drawing does not scroll the page. Starting the brush closes the mobile logo overlay and focuses the editor for immediate drawing and undo.
 
 ## Do's and Don'ts
+The SVG palette presents its eight categories as collapsible named sections with matching-item counts, plus expand/collapse-all controls. Search and category changes reopen matching groups so results never remain hidden by a previous collapse. Keep controls above the independently scrolling sections and retain click/drag insertion and explicit brand/service labels.
+
 Do preserve original SVG colors and keyboard focus. Do keep assignments visibly actionable. Don't replace meaningful names with ambiguous logos or imply that local data is shared.

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
-import { drawingLogos, drawingStorageKey } from '../src/drawing-assets.ts'
+import { drawingCategories, drawingLogos, drawingStorageKey } from '../src/drawing-assets.ts'
 import seed from './fixture.ts'
 
 type SceneElement = {
@@ -384,6 +384,39 @@ test('paste preserves native scene copying and reports corrupt images without ch
   })
   await expect(page.getByRole('alert')).toContainText('粘贴失败')
   expect((await scene(page)).elements).toHaveLength(2)
+})
+
+test('SVG palette groups every asset by category and supports folding, searching and mobile insertion', async ({ page }) => {
+  await page.goto('./')
+  await openDrawing(page)
+  const groups = page.locator('.drawing-logo-group')
+  await expect(groups).toHaveCount(Object.keys(drawingCategories).length)
+  for (const [id, name] of Object.entries(drawingCategories)) {
+    const group = page.getByRole('region', { name, exact: true })
+    await expect(group.locator('.drawing-logo-grid button')).toHaveCount(drawingLogos.filter(icon => icon.category === id).length)
+    await expect(group.locator('.drawing-group-heading small')).toHaveText(String(drawingLogos.filter(icon => icon.category === id).length))
+  }
+  await page.getByRole('button', { name: '收起全部分组', exact: true }).click()
+  await expect(page.locator('.drawing-group-heading[aria-expanded="false"]')).toHaveCount(8)
+  await expect(page.locator('.drawing-logo-grid button:visible')).toHaveCount(0)
+  const data = page.getByRole('region', { name: '数据库与消息', exact: true })
+  await data.locator('.drawing-group-heading').click()
+  await expect(data.getByRole('button', { name: '插入 PostgreSQL Logo', exact: true })).toBeVisible()
+  await page.getByLabel('搜索 Logo', { exact: true }).fill('PostgreSQL')
+  await expect(groups).toHaveCount(1)
+  await expect(page.getByRole('button', { name: '插入 PostgreSQL Logo', exact: true })).toBeVisible()
+  await page.getByLabel('搜索 Logo', { exact: true }).fill('')
+  await page.getByRole('button', { name: '收起全部分组', exact: true }).click()
+  await mkdir('.impeccable/review', { recursive: true })
+  await page.screenshot({ path: '.impeccable/review/topology-drawing-groups-desktop.png', animations: 'disabled' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByLabel('素材分类', { exact: true }).selectOption('containers')
+  await expect(groups).toHaveCount(1)
+  await expect(page.locator('.drawing-group-heading')).toHaveAttribute('aria-expanded', 'true')
+  await page.screenshot({ path: '.impeccable/review/topology-drawing-groups-mobile.png', animations: 'disabled' })
+  await page.getByRole('button', { name: '插入 Kubernetes Logo', exact: true }).click()
+  await expect(page.locator('.drawing-save-status')).toContainText('1 个元素')
+  await expect(page.getByRole('complementary', { name: '技术 Logo 素材' })).toHaveCount(0)
 })
 
 test('expanded SVG library filters Alibaba services, renders transparent assets and exports them alongside brand logos', async ({ page }) => {

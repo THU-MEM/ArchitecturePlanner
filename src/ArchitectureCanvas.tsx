@@ -39,6 +39,7 @@ export default function ArchitectureCanvas() {
   const [paletteOpen, setPaletteOpen] = useState(() => window.innerWidth > 900)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
   const [error, setError] = useState('')
   const [saveError, setSaveError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -268,6 +269,9 @@ export default function ArchitectureCanvas() {
   if (!initialData) return <p className="drawing-loading" role="status">正在读取架构画布…</p>
 
   const logos = filterDrawingLogos(search, category)
+  const logoGroups = Object.entries(drawingCategories).map(([id, name]) => ({
+    id, name, icons: logos.filter(icon => icon.category === id),
+  })).filter(group => group.icons.length)
   return <section className="drawing-workspace" aria-label="自由架构画布">
     <div className="drawing-toolbar">
       <button type="button" disabled={!api || busy} aria-pressed={activeTool === 'freedraw'} title="自由画笔：鼠标拖拽、手指或手写笔画轨迹（P）" onClick={() => {
@@ -327,17 +331,30 @@ export default function ArchitectureCanvas() {
       {paletteOpen && <aside className="drawing-logos" id="drawing-logos" aria-label="技术 Logo 素材">
         <div className="section-title"><h3>技术 Logo</h3><button type="button" onClick={() => setPaletteOpen(false)} aria-label="关闭 Logo 素材">关闭</button></div>
         <p>点击或拖入画布，保留透明背景，可缩放、移动。</p>
-        <label>搜索 Logo<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="ECS、对象存储、PostgreSQL…" /></label>
-        <label className="drawing-category">素材分类<select aria-label="素材分类" value={category} onChange={event => setCategory(event.target.value)}>
+        <label>搜索 Logo<input type="search" value={search} onChange={event => { setSearch(event.target.value); setCollapsedGroups([]) }} placeholder="ECS、对象存储、PostgreSQL…" /></label>
+        <label className="drawing-category">素材分类<select aria-label="素材分类" value={category} onChange={event => { setCategory(event.target.value); setCollapsedGroups([]) }}>
           <option value="">全部分类</option>
           {Object.entries(drawingCategories).map(([id, name]) => <option key={id} value={id}>{name}（{drawingLogos.filter(icon => icon.category === id).length}）</option>)}
         </select></label>
         <div className="drawing-logo-count" role="status">{logos.length} / {drawingLogos.length} 项 · SVG</div>
+        <div className="drawing-group-actions">
+          <button type="button" disabled={!logoGroups.length} onClick={() => setCollapsedGroups([])}>展开全部分组</button>
+          <button type="button" disabled={!logoGroups.length} onClick={() => setCollapsedGroups(logoGroups.map(group => group.id))}>收起全部分组</button>
+        </div>
         {category === 'alibaba' && <p className="drawing-service-note">产品图为服务示意，非官方图标；品牌 Logo 单独标记。</p>}
         <div className="drawing-logo-results">
-        <div className="drawing-logo-grid">{logos.map(icon => <button type="button" key={icon.src} draggable={!busy} disabled={!api || busy} aria-label={`插入 ${icon.label} Logo`} title={`${icon.label} · ${icon.kind === 'service' ? 'Lucide 服务示意，非官方图标' : '品牌 Logo'} · 拖拽或点击插入`}
+        {logoGroups.map(group => <section className="drawing-logo-group" key={group.id} aria-label={group.name}>
+          <h4><button type="button" className="drawing-group-heading" aria-expanded={!collapsedGroups.includes(group.id)} aria-controls={`drawing-group-${group.id}`} onClick={() => setCollapsedGroups(current => current.includes(group.id) ? current.filter(id => id !== group.id) : [...current, group.id])}>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 5 5-5 5" /></svg>
+            <span>{group.name}</span><small>{group.icons.length}</small>
+          </button></h4>
+          <div id={`drawing-group-${group.id}`} hidden={collapsedGroups.includes(group.id)}>
+          {group.id === 'alibaba' && category !== 'alibaba' && <p className="drawing-service-note">含非官方服务示意；品牌 Logo 单独标记。</p>}
+          <div className="drawing-logo-grid">{group.icons.map(icon => <button type="button" key={icon.src} draggable={!busy} disabled={!api || busy} aria-label={`插入 ${icon.label} Logo`} title={`${icon.label} · ${icon.kind === 'service' ? 'Lucide 服务示意，非官方图标' : '品牌 Logo'} · 拖拽或点击插入`}
           onDragStart={event => { event.dataTransfer.setData(logoDragType, icon.src); event.dataTransfer.effectAllowed = 'copy' }}
           onClick={() => void insertLogo(icon)}><Icon icon={icon} decorative loading="lazy" /><span>{icon.label}</span><small>{icon.kind === 'service' ? '服务示意' : '品牌 Logo'}</small></button>)}</div>
+          </div>
+        </section>)}
         {!logos.length && <p>没有匹配的 Logo，请换个关键词。</p>}
         </div>
       </aside>}

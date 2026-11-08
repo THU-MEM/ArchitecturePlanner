@@ -17,6 +17,14 @@
 .drawing-logo-count { color: var(--muted); font-size: 12px; margin: 10px 0; font-variant-numeric: tabular-nums; }
 .drawing-logos .drawing-service-note { margin: 0 0 10px; color: #80420c; }
 .drawing-logo-results { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #85aab9 #edf3f6; padding: 3px; margin: -3px; }
+.drawing-group-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+.drawing-group-actions button { font-size: 11px; padding: 5px 7px; }
+.drawing-logo-group + .drawing-logo-group { margin-top: 18px; }
+.drawing-logo-group h4 { margin: 0 0 8px; }
+.drawing-group-heading { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 4px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; text-align: left; font-size: 12px; color: #213c51; }
+.drawing-group-heading small { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.drawing-group-heading svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; flex-shrink: 0; }
+.drawing-group-heading[aria-expanded="true"] svg { transform: rotate(90deg); }
 .drawing-logo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .drawing-logo-grid button { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 10px 4px; min-width: 0; cursor: grab; }
 .drawing-logo-grid button:active { cursor: grabbing; }
